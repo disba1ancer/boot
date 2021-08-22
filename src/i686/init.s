@@ -95,18 +95,3 @@ memset:
         add     cur, 4
         jmp     0b
 1:      ret
-
-.section .init
-.global _init
-_init:
-        push    ebp
-        mov     ebp, esp
-
-.section .fini
-.global _fini
-_fini:
-        push    ebp
-        mov     ebp, esp
-
-.section .custom, "aw"
-        .8byte  0xAAAAAAAAAAAAAAAA
