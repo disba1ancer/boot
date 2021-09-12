@@ -49,61 +49,8 @@ I686_RealModeCall:
         add     esp, 16
         ret
 
-.global I686_EnterRealMode
-I686_EnterRealMode:
-        mov     eax, 0x18
-        mov     ds, ax
-        mov     es, ax
-        mov     ss, ax
-        nop
-        jmp     far ptr 0x8:realmod_entry
-
-protmod_entry:
-        mov     eax, 0x20
-        mov     ds, ax
-        mov     es, ax
-        mov     ss, ax
-        movzx   esp, sp
-        ret
-
-.section .text16, "awx"
+.section .text16, "ax"
 .code16
-.global I686_EnterProtMode
-I686_EnterProtMode:
-        cli
-
-        in      al, 0x70
-        or      al, 0x80
-        out     0x70, al
-        in      al, 0x71
-
-        lgdt    cs:[gdtr]
-        mov     eax, cr0
-        or      eax, 0x1
-        mov     cr0, eax
-
-data32  jmp     far ptr 0x10:protmod_entry
-
-realmod_entry:
-        mov     eax, cr0
-        and     eax, ~1
-        mov     cr0, eax
-        jmp     far ptr 0x1000:0f
-
-0:      mov     ax, cs
-        mov     ds, ax
-        mov     es, ax
-        xor     ax, ax
-        mov     ss, ax
-        nop
-
-        in      al, 0x70
-        and     al, 0x7f
-        out     0x70, al
-        in      al, 0x71
-
-        sti
-        ret     2
 
 realmod_int_entry:
         regframe_ptr_offset = 24
@@ -156,5 +103,68 @@ realmod_int_entry:
 
         jmp     I686_EnterProtMode
 
+.text
+.code32
+
+.global I686_EnterRealMode
+I686_EnterRealMode:
+        mov     eax, 0x18
+        mov     ds, ax
+        mov     es, ax
+        mov     ss, ax
+        nop
+        jmp     far ptr 0x8:realmod_entry
+
+.section .text16, "ax"
+.code16
+
+realmod_entry:
+        mov     eax, cr0
+        and     eax, ~1
+        mov     cr0, eax
+        jmp     far ptr 0x1000:0f
+
+0:      xor     ax, ax
+        mov     ss, ax
+        nop
+        mov     ax, cs
+        mov     ds, ax
+        mov     es, ax
+
+        in      al, 0x70
+        and     al, 0x7f
+        out     0x70, al
+        in      al, 0x71
+
+        sti
+        ret     2
+
+.global I686_EnterProtMode
+I686_EnterProtMode:
+        cli
+
+        in      al, 0x70
+        or      al, 0x80
+        out     0x70, al
+        in      al, 0x71
+
+        lgdt    cs:[gdtr]
+        mov     eax, cr0
+        or      eax, 0x1
+        mov     cr0, eax
+
+data32  jmp     far ptr 0x10:protmod_entry
+
 gdtr:   .2byte  0x3f
         .4byte  I686_gdt
+
+.text
+.code32
+
+protmod_entry:
+        mov     eax, 0x20
+        mov     ds, ax
+        mov     es, ax
+        mov     ss, ax
+        movzx   esp, sp
+        ret

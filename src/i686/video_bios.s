@@ -15,33 +15,7 @@ I686_VideoBIOS_WriteString:
         pop     ebp
         ret
 
-.global I686_VideoBIOS_GetVideoMode
-I686_VideoBIOS_GetVideoMode:
-        sub     esp, 12
-        mov     8[esp], ebx
-        mov     dword ptr 4[esp], offset 0f
-        mov     dword ptr 0[esp], offset get_video_mode_realmode
-        jmp     I686_EnterRealMode
-0:      mov     eax, 8[esp]
-        mov     [eax], cx
-        mov     2[eax], bh
-        pop     ebx
-        ret
-
-.global I686_VideoBIOS_GetCursorPosSize
-I686_VideoBIOS_GetCursorPosSize:
-        sub     esp, 12
-        mov     8[esp], ebx
-        mov     dword ptr 4[esp], offset 0f
-        mov     dword ptr 0[esp], offset get_cursor_realmode
-        jmp     I686_EnterRealMode
-0:      mov     eax, 8[esp]
-        mov     [eax], cx
-        mov     2[eax], dx
-        pop     ebx
-        ret
-
-.section .text16, "awx"
+.section .text16, "ax"
 .code16
 
 write_string_realmode:
@@ -68,11 +42,49 @@ write_string_realmode:
 
         jmp     I686_EnterProtMode
 
+.text
+.code32
+
+.global I686_VideoBIOS_GetVideoMode
+I686_VideoBIOS_GetVideoMode:
+        sub     esp, 12
+        mov     8[esp], ebx
+        mov     dword ptr 4[esp], offset 0f
+        mov     dword ptr 0[esp], offset get_video_mode_realmode
+        jmp     I686_EnterRealMode
+0:      mov     eax, 8[esp]
+        mov     [eax], cx
+        mov     2[eax], bh
+        pop     ebx
+        ret     4
+
+.section .text16, "ax"
+.code16
+
 get_video_mode_realmode:
         mov     ax, 0xF00
         int     0x10
         mov     cx, ax
         jmp     I686_EnterProtMode
+
+.text
+.code32
+
+.global I686_VideoBIOS_GetCursorPosSize
+I686_VideoBIOS_GetCursorPosSize:
+        sub     esp, 12
+        mov     8[esp], ebx
+        mov     dword ptr 4[esp], offset 0f
+        mov     dword ptr 0[esp], offset get_cursor_realmode
+        jmp     I686_EnterRealMode
+0:      mov     eax, 8[esp]
+        mov     [eax], cx
+        mov     2[eax], dx
+        pop     ebx
+        ret     4
+
+.section .text16, "ax"
+.code16
 
 get_cursor_realmode:
         mov     ax, 0x300

@@ -12,31 +12,37 @@ SECTIONS {
         *(.startup)
         *(.text16)
     } > startupseg AT > main
-    .text : {
-        *(.text)
+    .text : ALIGN(16) {
+        *(.init*)
+        *(.fini*)
+        *(.text*)
     } > main
     .rodata : {
-        __ctors_start = .;
+        *(.rodata*)
+    } > main
+    .eh_frame_hdr : {
+        *(.eh_frame_hdr*)
+    } > main
+    .eh_frame : {
+        *(.eh_frame)
+    } > main
+    .gcc_except_table : {
+        *(.gcc_except_table*)
+    } > main
+    .ctors : ALIGN(16) {
         *(.ctors)
-        __ctors_end = .;
-        LONG(__ctors_end)
-        __dtors_start = .;
+    } > main
+    .dtors : ALIGN(16) {
         *(.dtors)
-        __dtors_end = .;
-        LONG(__dtors_end)
-        *(.rodata)
     } > main
-    .data : {
-        *(.data)
-    } > main
-    .custom : {
-        *(.custom)
+    .data : ALIGN(16) {
+        *(.data*)
     } > main
     .bss : ALIGN(16) {
         __bss_start = .;
         *(COMMON)
-        *(.bss)
-        __bss_end = .;
+        *(.bss*)
+        __bss_end = ALIGN(16);
     } > main
     __bss_size = __bss_end - __bss_start;
 }

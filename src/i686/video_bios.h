@@ -38,18 +38,19 @@ I686_VideoBIOS_CursorInfo I686_VideoBIOS_GetCursorPosSize(void);
 
 namespace I686::VideoBIOS {
 
-using WrStrMode = I686_VideoBIOS_WrStrMode;
-constexpr auto WrStrMode_UpdateCursor = I686_VideoBIOS_WrStrMode_UpdateCursor;
-constexpr auto WrStrMode_WithAttribute = I686_VideoBIOS_WrStrMode_WithAttribute;
+enum WrStrMode {
+    WrStrMode_UpdateCursor = I686_VideoBIOS_WrStrMode_UpdateCursor,
+    WrStrMode_WithAttribute = I686_VideoBIOS_WrStrMode_WithAttribute
+};
 using VideoModeInfo = I686_VideoBIOS_VideoModeInfo;
 using CursorInfo = I686_VideoBIOS_CursorInfo;
 
-inline void WriteString(int mode, int pageNum, int color, size_t stringSize, int row, int column, char *str)
+inline void WriteString(int mode, int pageNum, int color, size_t stringSize, int row, int column, char *str) /*noexcept*/
 { I686_VideoBIOS_WriteString(mode, pageNum, color, stringSize, row, column, str); }
 
-inline VideoModeInfo GetVideoMode() { return I686_VideoBIOS_GetVideoMode(); }
+inline VideoModeInfo GetVideoMode() /*noexcept*/ { return I686_VideoBIOS_GetVideoMode(); }
 
-inline CursorInfo GetCursorPosSize() { return I686_VideoBIOS_GetCursorPosSize(); }
+inline CursorInfo GetCursorPosSize() /*noexcept*/ { return I686_VideoBIOS_GetCursorPosSize(); }
 
 }
 
