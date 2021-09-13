@@ -165,7 +165,7 @@ strcmp:
 .globl  strlen
 .type strlen, @function
 strlen:
-        mov     edx, DWORD PTR [ebp+4]
+        mov     edx, DWORD PTR [esp+4]
         cmp     BYTE PTR [edx], 0
         je      1f
         mov     eax, edx

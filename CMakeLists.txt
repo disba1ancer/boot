@@ -76,14 +76,14 @@ add_dependencies(boot crti crtn)
 set_target_properties(boot PROPERTIES LINK_DEPENDS ${CMAKE_SOURCE_DIR}/${BOOT_LINKER_SCRIPT})
 
 add_custom_target(crti
-    ALL ${CMAKE_ASM_COMPILER} -Wa,--divide -c ${CMAKE_SOURCE_DIR}/src/i686/crti.s -o crti.o
+    ALL ${CMAKE_ASM_COMPILER} -Wa,--divide -g -c ${CMAKE_SOURCE_DIR}/src/i686/crti.s -o crti.o
     SOURCES
         src/i686/crti.s
     BYPRODUCTS
         crti.o
 )
 add_custom_target(crtn
-    ALL ${CMAKE_ASM_COMPILER} -Wa,--divide -c ${CMAKE_SOURCE_DIR}/src/i686/crtn.s -o crtn.o
+    ALL ${CMAKE_ASM_COMPILER} -Wa,--divide -g -c ${CMAKE_SOURCE_DIR}/src/i686/crtn.s -o crtn.o
     SOURCES
         src/i686/crtn.s
     BYPRODUCTS
