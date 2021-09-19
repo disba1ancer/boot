@@ -1,7 +1,9 @@
 #include "i686/processor.h"
 #include "i686/video_bios.h"
 #include "i686/membios.h"
-//#include <exception>
+#include <cstddef>
+#include <cstdlib>
+#include <stdlib.h>
 
 char str[] = "Hello, World!\r\n";
 
@@ -21,10 +23,6 @@ struct StartupInfo {
 
 extern "C" void * heap_start;
 extern "C" void * heap_end;
-
-class testexcpt { public: virtual ~testexcpt() = default; };
-void testxcpt();
-void test();
 
 char* u64toha(uint64_t val, char* buf, size_t size) {
     static const char map[] = {
@@ -48,7 +46,7 @@ char* u64toha(uint64_t val, char* buf, size_t size) {
     return ptr;
 }
 
-extern "C" void boot_main([[maybe_unused]] StartupInfo si)
+extern "C" void boot_main(StartupInfo si [[maybe_unused]])
 {
     using namespace I686::VideoBIOS;
     auto info = GetVideoMode();
@@ -56,25 +54,20 @@ extern "C" void boot_main([[maybe_unused]] StartupInfo si)
     WriteString(WrStrMode_UpdateCursor, info.page, 7, sizeof(str) - 1, cursor.row, cursor.column, str);
     I686_MemoryMapEntry entry;
     unsigned context = 0;
-    for (int row = 0; I686_GetMemoryMap(&context, &entry); ++row) {
+    int row = 0;
+    do {
+        I686_GetMemoryMap(&context, &entry);
         char buf[17];
         auto str = u64toha(entry.startRegion, buf, 17);
-        WriteString(WrStrMode_UpdateCursor, info.page, 7, buf + sizeof(buf) - str - 1, row, 0, str);
+        WriteString(WrStrMode_UpdateCursor, info.page, 7, std::size_t(buf + sizeof(buf) - str) - 1, row, 0, str);
         str = u64toha(entry.regionSize, buf, 17);
         WriteString(WrStrMode_UpdateCursor, info.page, 7, buf + sizeof(buf) - str - 1, row, 20, str);
         str = u64toha(entry.type, buf, 17);
         WriteString(WrStrMode_UpdateCursor, info.page, 7, buf + sizeof(buf) - str - 1, row, 40, str);
         str = u64toha(entry.flags, buf, 17);
         WriteString(WrStrMode_UpdateCursor, info.page, 7, buf + sizeof(buf) - str - 1, row, 50, str);
-        if (context == 0) break;
-    }
-    test();
-}
-
-void test() {
-    try {
-        testxcpt();
-    } catch (testexcpt& e) {
-        return;
-    }
+        ++row;
+    } while (context);
+    void *ptr = malloc(0x40001);
+    free(ptr);
 }

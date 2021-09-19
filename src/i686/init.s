@@ -41,7 +41,6 @@ _end:   hlt
 
 .text
 .code32
-.type start32, @function
 start32:
         movzx   eax, dx
         xor     ebp, ebp
@@ -56,12 +55,14 @@ start32:
 #        call    __register_frame
 #        call    _ctors
         lea     esp, [esp + 12]
+        call    boot_InitBuddyAlloc
         call    _init
         call    boot_main
         call    _fini
 #        call    _dtors
 
 .global abort
+.type abort, @function
 abort:
         push    offset _end
         jmp     I686_EnterRealMode

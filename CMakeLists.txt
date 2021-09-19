@@ -27,8 +27,8 @@ execute_process(
 )
 
 set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} -nostdlib -Wa,--divide")
-set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}   -nostdlib -ffreestanding")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -nostdlib -ffreestanding") #-fno-exceptions -fno-rtti
+set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}   -nostdlib -ffreestanding -Wall -Wextra -pedantic -pedantic-errors")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -nostdlib -ffreestanding -Wall -Wextra -pedantic -pedantic-errors") #-fno-exceptions -fno-rtti
 
 set(CMAKE_ASM_LINK_EXECUTABLE "<CMAKE_ASM_COMPILER> <FLAGS> <CMAKE_ASM_LINK_FLAGS> <LINK_FLAGS> ${CMAKE_BINARY_DIR}/crti.o ${BOOT_CRTBEGIN} <OBJECTS> -o <TARGET> <LINK_LIBRARIES> ${BOOT_CRTEND} ${CMAKE_BINARY_DIR}/crtn.o")
 set(CMAKE_C_LINK_EXECUTABLE   "<CMAKE_C_COMPILER>   <FLAGS> <CMAKE_C_LINK_FLAGS>   <LINK_FLAGS> ${CMAKE_BINARY_DIR}/crti.o ${BOOT_CRTBEGIN} <OBJECTS> -o <TARGET> <LINK_LIBRARIES> ${BOOT_CRTEND} ${CMAKE_BINARY_DIR}/crtn.o")
@@ -38,8 +38,10 @@ project(boot LANGUAGES ASM C CXX)
 
 set(CMAKE_C_STANDARD 17)
 set(CMAKE_C_STANDARD_REQUIRED ON)
+set(CMAKE_C_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 set(BOOT_LINKER_SCRIPT src/ldscripts/i686.ld)
 
@@ -57,17 +59,17 @@ add_executable(boot
     src/i686/processor.h
     src/i686/video_bios.h
     src/i686/video_bios.s
+    src/include/btstdbeg.h
+    src/include/btstdend.h
+    src/include/string.h
+    src/include/stdlib.h
     src/main.cpp
-    src/testxcpt.cpp
     ${BOOT_LINKER_SCRIPT}
 )
 target_compile_options(boot PRIVATE
-    -Wall
-    -Wextra
-    -pedantic
-    -pedantic-errors
     -mgeneral-regs-only
 )
+target_include_directories(boot PRIVATE src/include)
 target_link_options(boot PRIVATE
     -T ${CMAKE_SOURCE_DIR}/${BOOT_LINKER_SCRIPT}
 )
@@ -90,5 +92,5 @@ add_custom_target(crtn
         crtn.o
 )
 
-add_custom_target("boot.bin" ALL ${CMAKE_OBJCOPY} -O binary boot boot.bin)
+add_custom_target("boot.bin" ALL ${CMAKE_OBJCOPY} -O binary boot boot.bin BYPRODUCTS boot.bin)
 add_dependencies("boot.bin" boot)
