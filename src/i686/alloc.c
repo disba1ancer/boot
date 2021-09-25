@@ -4,58 +4,61 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include "membios.h"
+#include "bt_util.h"
 
 #define BOOT_ALLOC_BLOCK_LOG_SIZE ((size_t)4U)
 #define BOOT_ALLOC_BLOCK_SIZE (((size_t)1U) << BOOT_ALLOC_BLOCK_LOG_SIZE)
-#define BOOT_ALLOC_BLOCK_BIT_SIZE (CHAR_BIT * BOOT_ALLOC_BLOCK_SIZE)
 
 static void *AllocFromRange(void **start, void *end, size_t size);
 static void *boot_LinearAlloc(size_t size);
 static int bsrszt(size_t val);
+static uintptr_t AlignPtrUp(uintptr_t val, unsigned logAlign);
+static uintptr_t AlignPtrDown(uintptr_t val, unsigned logAlign);
+static int toggleBit(unsigned char *val, unsigned bitNum);
 
-struct DoublyLinkedListElement {
-    struct DoublyLinkedListElement *next;
-    struct DoublyLinkedListElement *prev;
+BOOT_STRUCT(DoublyLinkedListElement) {
+    DoublyLinkedListElement *next;
+    DoublyLinkedListElement *prev;
 };
 
-struct DoublyLinkedList {
-    struct DoublyLinkedListElement *begin;
+BOOT_STRUCT(DoublyLinkedList) {
+    DoublyLinkedListElement *begin;
 };
 
-static void DoublyLinkedList_Add(struct DoublyLinkedList *list, struct DoublyLinkedListElement *elem);
-static void DoublyLinkedList_Remove(struct DoublyLinkedList *list, struct DoublyLinkedListElement *elem);
+static void DoublyLinkedList_Add(DoublyLinkedList *list, DoublyLinkedListElement *elem);
+static void DoublyLinkedList_Remove(DoublyLinkedList *list, DoublyLinkedListElement *elem);
 
 void boot_InitBuddyAlloc();
 
-struct boot_BuddyFreeBlockHeader {
-    struct DoublyLinkedListElement elem;
+BOOT_STRUCT(boot_BuddyFreeBlockHeader) {
+    DoublyLinkedListElement elem;
 };
 
-struct boot_BuddyBlockStore {
-    struct DoublyLinkedList freeList;
+BOOT_STRUCT(boot_BuddyBlockStore) {
+    DoublyLinkedList freeList;
     size_t pairBitmapStart;
 };
 
 /* TODO: Add locks for working in multithread and with interrupts */
-struct boot_BuddyRegion {
+BOOT_STRUCT(boot_BuddyRegion) {
     void *start;
     void *end;
-    unsigned *bitmap;
+    unsigned char *bitmap;
     size_t maxOrder;
 
     struct boot_BuddyBlockStore buddyArray[];
 };
 
-static struct boot_BuddyRegion *boot_BuddyRegion_Construct(void *regionStart, void *regionEnd);
-static void boot_BuddyRegion_Construct_ph2(struct boot_BuddyRegion *region, void* ptr);
-static int boot_BuddyRegion_TogglePairBit(struct boot_BuddyRegion *region, void *block, size_t order);
-static void *boot_BuddyRegion_AllocBlock(struct boot_BuddyRegion *region, size_t order);
-static void boot_BuddyRegion_FreeBlock(struct boot_BuddyRegion *region, void *block, size_t order);
+static boot_BuddyRegion *boot_BuddyRegion_Construct(void *regionStart, void *regionEnd);
+static void boot_BuddyRegion_Construct_ph2(boot_BuddyRegion *region, void* ptr);
+static int boot_BuddyRegion_TogglePairBit(boot_BuddyRegion *region, void *block, size_t order);
+static void *boot_BuddyRegion_AllocBlock(boot_BuddyRegion *region, size_t order);
+static void boot_BuddyRegion_FreeBlock(boot_BuddyRegion *region, void *block, size_t order);
 
 extern void *heap_start;
 extern void *heap_end;
 
-static struct boot_BuddyRegion *allocRegion;
+static boot_BuddyRegion *allocRegion;
 
 void *AllocFromRange(void **start, void *end, size_t size)
 {
@@ -75,37 +78,35 @@ void *boot_LinearAlloc(size_t size)
 
 int bsrszt(size_t val)
 {
-    if (val == 0) {
-        return (sizeof(val) * CHAR_BIT);
-    }
+    size_t mask = ((size_t)-1) / 2 + 1;
     int result = 0;
-    while (val > 1) {
+    while ((val & 1) != 1) {
+        val = (val >> 1) + mask;
         ++result;
-        val >>= 1;
     }
     return result;
 }
 
-static uintptr_t AlignPtrUp(uintptr_t val, unsigned logAlign)
+uintptr_t AlignPtrUp(uintptr_t val, unsigned logAlign)
 {
     unsigned mask = ((1U << logAlign) - 1U);
     return (val + mask) & ~mask;
 }
 
-static uintptr_t AlignPtrDown(uintptr_t val, unsigned logAlign)
+uintptr_t AlignPtrDown(uintptr_t val, unsigned logAlign)
 {
     unsigned mask = ((1U << logAlign) - 1U);
     return val & ~mask;
 }
 
-int toggleBit(unsigned *val, unsigned bitNum)
+int toggleBit(unsigned char *val, unsigned bitNum)
 {
-    unsigned mask = 1U << bitNum;
-    *val = *val ^ mask;
+    unsigned mask = 1 << bitNum;
+    *val = *val ^ (unsigned char)mask;
     return !!(*val & mask);
 }
 
-void DoublyLinkedList_Add(struct DoublyLinkedList *list, struct DoublyLinkedListElement *elem)
+void DoublyLinkedList_Add(DoublyLinkedList *list, DoublyLinkedListElement *elem)
 {
     elem->prev = NULL;
     elem->next = list->begin;
@@ -115,7 +116,7 @@ void DoublyLinkedList_Add(struct DoublyLinkedList *list, struct DoublyLinkedList
     }
 }
 
-void DoublyLinkedList_Remove(struct DoublyLinkedList *list, struct DoublyLinkedListElement *elem)
+void DoublyLinkedList_Remove(DoublyLinkedList *list, DoublyLinkedListElement *elem)
 {
     if (elem->prev != NULL) {
         elem->prev->next = elem->next;
@@ -129,12 +130,12 @@ void DoublyLinkedList_Remove(struct DoublyLinkedList *list, struct DoublyLinkedL
 
 void boot_InitBuddyAlloc()
 {
-    struct boot_BuddyRegion *initialRegion = boot_BuddyRegion_Construct(heap_start, heap_end);
+    boot_BuddyRegion *initialRegion = boot_BuddyRegion_Construct(heap_start, heap_end);
     allocRegion = initialRegion;
 //  TODO: Add additional regions from int 0x15 AX=0xE820
 }
 
-struct boot_BuddyRegion *boot_BuddyRegion_Construct(void *regionStart, void *regionEnd)
+boot_BuddyRegion *boot_BuddyRegion_Construct(void *regionStart, void *regionEnd)
 {
     void *current = regionStart;
     size_t region_size = (size_t)((char*)regionEnd - (char*)current);
@@ -144,8 +145,8 @@ struct boot_BuddyRegion *boot_BuddyRegion_Construct(void *regionStart, void *reg
     size_t regionBlockCount = region_size / BOOT_ALLOC_BLOCK_SIZE;
 
     size_t maxOrder = (size_t)bsrszt(regionBlockCount * 2 - 1);
-    struct boot_BuddyRegion *buddyRegion;
-    size_t buddyRegionSize = sizeof(struct boot_BuddyRegion) + maxOrder * sizeof(struct boot_BuddyBlockStore);
+    boot_BuddyRegion *buddyRegion;
+    size_t buddyRegionSize = sizeof(boot_BuddyRegion) + maxOrder * sizeof(boot_BuddyBlockStore);
     buddyRegion = AllocFromRange(&current, regionEnd, buddyRegionSize);
     memset(buddyRegion, 0, buddyRegionSize);
 
@@ -170,7 +171,7 @@ struct boot_BuddyRegion *boot_BuddyRegion_Construct(void *regionStart, void *reg
 }
 
 /* TODO: Check working of this algorithm */
-void boot_BuddyRegion_Construct_ph2(struct boot_BuddyRegion *region, void* current)
+void boot_BuddyRegion_Construct_ph2(boot_BuddyRegion *region, void* current)
 {
     size_t size = (size_t)((char*)region->end - (char*)current);
     size_t memBlockOffset = (size_t)((char*)current - (char*)region->start);
@@ -193,25 +194,25 @@ void boot_BuddyRegion_Construct_ph2(struct boot_BuddyRegion *region, void* curre
     return;
 }
 
-int boot_BuddyRegion_TogglePairBit(struct boot_BuddyRegion *region, void *block, size_t order)
+int boot_BuddyRegion_TogglePairBit(boot_BuddyRegion *region, void *block, size_t order)
 {
     if (order < region->maxOrder - 1){
         size_t pairNum = ((size_t)((char*)block - (char*)region->start) / BOOT_ALLOC_BLOCK_SIZE) >> (order + 1);
         size_t bitNum = region->buddyArray[order].pairBitmapStart + pairNum;
-        size_t bitmapBlock = bitNum / (CHAR_BIT * sizeof(unsigned));
-        size_t bitNumInBlock = bitNum % (CHAR_BIT * sizeof(unsigned));
+        size_t bitmapBlock = bitNum / CHAR_BIT;
+        size_t bitNumInBlock = bitNum % CHAR_BIT;
         return toggleBit(region->bitmap + bitmapBlock, bitNumInBlock);
     }
     return !!(1);
 }
 
-void *boot_BuddyRegion_AllocBlock(struct boot_BuddyRegion *region, size_t order)
+void *boot_BuddyRegion_AllocBlock(boot_BuddyRegion *region, size_t order)
 {
-    if (order >= region->maxOrder || order >= sizeof(unsigned) * CHAR_BIT) {
+    if (order >= region->maxOrder) {
         return NULL;
     }
-    struct DoublyLinkedList *list = &(region->buddyArray[order].freeList);
-    struct DoublyLinkedListElement *elem;
+    DoublyLinkedList *list = &(region->buddyArray[order].freeList);
+    DoublyLinkedListElement *elem;
     elem = list->begin;
     if (elem != NULL) {
         DoublyLinkedList_Remove(list, elem);
@@ -228,11 +229,11 @@ void *boot_BuddyRegion_AllocBlock(struct boot_BuddyRegion *region, size_t order)
     return NULL;
 }
 
-void boot_BuddyRegion_FreeBlock(struct boot_BuddyRegion *region, void *block, size_t order)
+void boot_BuddyRegion_FreeBlock(boot_BuddyRegion *region, void *block, size_t order)
 {
     size_t blockOffset = (size_t)((char*)block - (char*)region->start);
     if (!boot_BuddyRegion_TogglePairBit(region, block, order)) {
-        struct boot_BuddyFreeBlockHeader *block;
+        boot_BuddyFreeBlockHeader *block;
         size_t mask = BOOT_ALLOC_BLOCK_SIZE << order;
         block = (void*)((char*)region->start + (blockOffset ^ mask));
         DoublyLinkedList_Remove(&(region->buddyArray[order].freeList), &(block->elem));
@@ -247,7 +248,7 @@ void boot_BuddyRegion_FreeBlock(struct boot_BuddyRegion *region, void *block, si
 void *malloc(size_t size)
 {
     size = AlignPtrUp(size, BOOT_ALLOC_BLOCK_LOG_SIZE);
-    size = size / BOOT_ALLOC_BLOCK_SIZE;
+    size = size / BOOT_ALLOC_BLOCK_SIZE + 1;
     size_t order = (size_t)bsrszt(size * 2 - 1);
     char* block = boot_BuddyRegion_AllocBlock(allocRegion, order);
     if (block == NULL) {
@@ -262,7 +263,7 @@ static void *tryRealloc(void* ptr, size_t size) {
         return NULL;
     }
     size = AlignPtrUp(size, BOOT_ALLOC_BLOCK_LOG_SIZE);
-    size = size / BOOT_ALLOC_BLOCK_SIZE;
+    size = size / BOOT_ALLOC_BLOCK_SIZE + 1;
     size_t reqOrder = (size_t)bsrszt(size * 2 - 1);
     char *block = (char*)ptr - BOOT_ALLOC_BLOCK_SIZE;
     size_t order = *((size_t*)block);

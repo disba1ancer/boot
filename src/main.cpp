@@ -48,15 +48,15 @@ char* u64toha(uint64_t val, char* buf, size_t size) {
 
 extern "C" void boot_main(StartupInfo si [[maybe_unused]])
 {
-    using namespace I686::VideoBIOS;
+    using namespace i686::VideoBIOS;
     auto info = GetVideoMode();
     auto cursor = GetCursorPosSize();
     WriteString(WrStrMode_UpdateCursor, info.page, 7, sizeof(str) - 1, cursor.row, cursor.column, str);
-    I686_MemoryMapEntry entry;
+    i686_MemoryMapEntry entry;
     unsigned context = 0;
     int row = 0;
     do {
-        I686_GetMemoryMap(&context, &entry);
+        i686_GetMemoryMap(&context, &entry);
         char buf[17];
         auto str = u64toha(entry.startRegion, buf, 17);
         WriteString(WrStrMode_UpdateCursor, info.page, 7, std::size_t(buf + sizeof(buf) - str) - 1, row, 0, str);

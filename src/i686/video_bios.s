@@ -2,8 +2,8 @@
 .text
 .code32
 
-.global I686_VideoBIOS_WriteString
-I686_VideoBIOS_WriteString:
+.global i686_VideoBIOS_WriteString
+i686_VideoBIOS_WriteString:
         push    ebp
         mov     ebp, esp
         sub     esp, 12
@@ -45,8 +45,8 @@ write_string_realmode:
 .text
 .code32
 
-.global I686_VideoBIOS_GetVideoMode
-I686_VideoBIOS_GetVideoMode:
+.global i686_VideoBIOS_GetVideoMode
+i686_VideoBIOS_GetVideoMode:
         sub     esp, 12
         mov     8[esp], ebx
         mov     dword ptr 4[esp], offset 0f
@@ -70,8 +70,8 @@ get_video_mode_realmode:
 .text
 .code32
 
-.global I686_VideoBIOS_GetCursorPosSize
-I686_VideoBIOS_GetCursorPosSize:
+.global i686_VideoBIOS_GetCursorPosSize
+i686_VideoBIOS_GetCursorPosSize:
         sub     esp, 12
         mov     8[esp], ebx
         mov     dword ptr 4[esp], offset 0f

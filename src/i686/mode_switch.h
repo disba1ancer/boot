@@ -3,7 +3,7 @@
 
 #include "processor.h"
 
-typedef struct I686_RealModeState {
+typedef struct i686_RealModeState {
     uint32_t eip;
     uint32_t eflags;
     uint32_t eax;
@@ -20,7 +20,7 @@ typedef struct I686_RealModeState {
     uint32_t ds;
     uint32_t fs;
     uint32_t gs;
-} I686_RealModeState;
+} i686_RealModeState;
 
 #ifdef __cplusplus
 extern "C" {
@@ -29,7 +29,7 @@ extern "C" {
 /*
  * This function is evil, do not use it
  */
-void I686_RealModeCall(I686_RealModeState* regs);
+void i686_RealModeCall(i686_RealModeState* regs);
 
 #ifdef __cplusplus
 } // extern "C"

@@ -156,7 +156,7 @@ I686_EnterProtMode:
 data32  jmp     far ptr 0x10:protmod_entry
 
 gdtr:   .2byte  0x3f
-        .4byte  I686_gdt
+        .4byte  i686_gdt
 
 .text
 .code32
