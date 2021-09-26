@@ -1,8 +1,8 @@
 .intel_syntax noprefix
 .text
 
-.global I686_GetMemoryMap
-I686_GetMemoryMap:
+.global i686_GetMemoryMap
+i686_GetMemoryMap:
         push    ebp
         mov     ebp, esp
         lea     esp, [esp - 8]

@@ -1,25 +1,14 @@
 #include "i686/processor.h"
 #include "i686/video_bios.h"
 #include "i686/membios.h"
+#include "i686/init.h"
+#include "gpt.h"
 #include <cstddef>
 #include <cstdlib>
 #include <stdlib.h>
+#include <string.h>
 
 char str[] = "Hello, World!\r\n";
-
-struct GPTPartition {
-  unsigned char typeGUID[16];
-  unsigned char partGUID[16];
-  uint64_t firstLBA;
-  uint64_t lastLBA;
-  uint64_t attributes;
-};
-
-struct StartupInfo {
-    uint16_t pnpPtr[2];
-    int diskNum;
-    GPTPartition part;
-};
 
 extern "C" void * heap_start;
 extern "C" void * heap_end;
@@ -46,7 +35,7 @@ char* u64toha(uint64_t val, char* buf, size_t size) {
     return ptr;
 }
 
-extern "C" void boot_main(StartupInfo si [[maybe_unused]])
+extern "C" void boot_main(boot_StartupInfo *si [[maybe_unused]])
 {
     using namespace i686::VideoBIOS;
     auto info = GetVideoMode();
@@ -68,6 +57,21 @@ extern "C" void boot_main(StartupInfo si [[maybe_unused]])
         WriteString(WrStrMode_UpdateCursor, info.page, 7, buf + sizeof(buf) - str - 1, row, 50, str);
         ++row;
     } while (context);
-    void *ptr = malloc(0x40001);
-    free(ptr);
+    i686::vbe::Info vbeInfo;
+    memcpy(vbeInfo.magic, "VBE2", 4);
+    i686::vbe::GetInformation(vbeInfo);
+    auto modes = static_cast<uint16_t*>(i686_LoadPointer(vbeInfo.videoModes));
+    auto oemName = static_cast<char*>(i686_LoadPointer(vbeInfo.oemStr));
+    auto vendorName = static_cast<char*>(i686_LoadPointer(vbeInfo.vendorName));
+    auto productName = static_cast<char*>(i686_LoadPointer(vbeInfo.productName));
+    if (oemName != nullptr) {
+        WriteString(WrStrMode_UpdateCursor, info.page, 7, strlen(oemName), row++, 0, oemName);
+    }
+    if (vendorName != nullptr) {
+        WriteString(WrStrMode_UpdateCursor, info.page, 7, strlen(vendorName), row++, 0, vendorName);
+
+    }
+    if (productName != nullptr) {
+        WriteString(WrStrMode_UpdateCursor, info.page, 7, strlen(productName), row++, 0, productName);
+    }
 }

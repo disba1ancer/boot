@@ -1,13 +1,16 @@
-#include <stddef.h>
 #include <limits.h>
 #include <string.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <stdalign.h>
 #include "membios.h"
 #include "bt_util.h"
+#include "alloc.h"
 
 #define BOOT_ALLOC_BLOCK_LOG_SIZE ((size_t)4U)
 #define BOOT_ALLOC_BLOCK_SIZE (((size_t)1U) << BOOT_ALLOC_BLOCK_LOG_SIZE)
+
+_Static_assert(BOOT_ALLOC_BLOCK_SIZE >= alignof(max_align_t), "Fundamental alignment greather than BOOT_ALLOC_BLOCK_SIZE");
 
 static void *AllocFromRange(void **start, void *end, size_t size);
 static void *boot_LinearAlloc(size_t size);
@@ -15,20 +18,6 @@ static int bsrszt(size_t val);
 static uintptr_t AlignPtrUp(uintptr_t val, unsigned logAlign);
 static uintptr_t AlignPtrDown(uintptr_t val, unsigned logAlign);
 static int toggleBit(unsigned char *val, unsigned bitNum);
-
-BOOT_STRUCT(DoublyLinkedListElement) {
-    DoublyLinkedListElement *next;
-    DoublyLinkedListElement *prev;
-};
-
-BOOT_STRUCT(DoublyLinkedList) {
-    DoublyLinkedListElement *begin;
-};
-
-static void DoublyLinkedList_Add(DoublyLinkedList *list, DoublyLinkedListElement *elem);
-static void DoublyLinkedList_Remove(DoublyLinkedList *list, DoublyLinkedListElement *elem);
-
-void boot_InitBuddyAlloc();
 
 BOOT_STRUCT(boot_BuddyFreeBlockHeader) {
     DoublyLinkedListElement elem;
@@ -78,10 +67,9 @@ void *boot_LinearAlloc(size_t size)
 
 int bsrszt(size_t val)
 {
-    size_t mask = ((size_t)-1) / 2 + 1;
     int result = 0;
-    while ((val & 1) != 1) {
-        val = (val >> 1) + mask;
+    while (val != 1) {
+        val >>= 1;
         ++result;
     }
     return result;
@@ -106,28 +94,6 @@ int toggleBit(unsigned char *val, unsigned bitNum)
     return !!(*val & mask);
 }
 
-void DoublyLinkedList_Add(DoublyLinkedList *list, DoublyLinkedListElement *elem)
-{
-    elem->prev = NULL;
-    elem->next = list->begin;
-    list->begin = elem;
-    if (elem->next != NULL) {
-        elem->next->prev = elem;
-    }
-}
-
-void DoublyLinkedList_Remove(DoublyLinkedList *list, DoublyLinkedListElement *elem)
-{
-    if (elem->prev != NULL) {
-        elem->prev->next = elem->next;
-    } else {
-        list->begin = elem->next;
-    }
-    if (elem->next != NULL) {
-        elem->next->prev = elem->prev;
-    }
-}
-
 void boot_InitBuddyAlloc()
 {
     boot_BuddyRegion *initialRegion = boot_BuddyRegion_Construct(heap_start, heap_end);
@@ -146,7 +112,7 @@ boot_BuddyRegion *boot_BuddyRegion_Construct(void *regionStart, void *regionEnd)
 
     size_t maxOrder = (size_t)bsrszt(regionBlockCount * 2 - 1);
     boot_BuddyRegion *buddyRegion;
-    size_t buddyRegionSize = sizeof(boot_BuddyRegion) + maxOrder * sizeof(boot_BuddyBlockStore);
+    size_t buddyRegionSize = sizeof(boot_BuddyRegion) + sizeof(boot_BuddyBlockStore[maxOrder]);
     buddyRegion = AllocFromRange(&current, regionEnd, buddyRegionSize);
     memset(buddyRegion, 0, buddyRegionSize);
 
@@ -160,7 +126,7 @@ boot_BuddyRegion *boot_BuddyRegion_Construct(void *regionStart, void *regionEnd)
 
     buddyRegion->buddyArray[0].pairBitmapStart = (size_t)-1;
     size_t bitmapStart = 0;
-    for (int i = 0; i < (int)maxOrder; ++i) {
+    for (size_t i = 0; i < maxOrder; ++i) {
         buddyRegion->buddyArray[i].pairBitmapStart = bitmapStart;
         size_t half_bmp_size = regionBlockCount / 2;
         bitmapStart += half_bmp_size + (regionBlockCount & 1);
@@ -278,7 +244,8 @@ void *realloc(void* ptr, size_t size)
         if (ptr != NULL) {
             char *block = (char*)ptr - BOOT_ALLOC_BLOCK_SIZE;
             size_t order = *((size_t*)block);
-            memcpy(newPtr, ptr, BOOT_ALLOC_BLOCK_SIZE << order);
+            memcpy(newPtr, ptr, (BOOT_ALLOC_BLOCK_SIZE << order) - BOOT_ALLOC_BLOCK_SIZE);
+            free(ptr);
         }
     }
     return newPtr;

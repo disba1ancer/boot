@@ -90,3 +90,36 @@ get_cursor_realmode:
         mov     ax, 0x300
         int     0x10
         jmp     I686_EnterProtMode
+
+.text
+.code32
+
+.global i686_vbe_GetInformation
+i686_vbe_GetInformation:
+        buf = 8
+
+        push    ebp
+        mov     ebp, esp
+        mov     eax, buf[ebp]
+        shl     eax, 12
+        shr     ax, 12
+        mov     buf[ebp], eax
+        sub     esp, 12
+        mov     8[esp], edi
+        mov     dword ptr 4[esp], offset 0f
+        mov     dword ptr 0[esp], offset vbe_get_info_rm
+        jmp     I686_EnterRealMode
+0:      movzx   eax, dx
+        pop     edi
+        pop     ebp
+        ret
+
+.section .text16, "ax"
+.code16
+
+vbe_get_info_rm:
+        les     di, buf[bp]
+        mov     ax, 0x4F00
+        int     0x10
+        mov     dx, ax
+        jmp     I686_EnterProtMode

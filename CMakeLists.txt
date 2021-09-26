@@ -47,7 +47,11 @@ set(BOOT_LINKER_SCRIPT src/ldscripts/i686.ld)
 
 add_executable(boot
     src/i686/alloc.c
+    src/i686/alloc.h
 #    src/i686/ctordtor.c
+    src/i686/exit.c
+    src/i686/init.c
+    src/i686/init.h
     src/i686/init.s
     src/i686/membios.h
     src/i686/membios.s
@@ -56,11 +60,15 @@ add_executable(boot
     src/i686/mode_switch.c
     src/i686/mode_switch.h
     src/i686/mode_switch.s
+    src/i686/processor.c
     src/i686/processor.h
     src/i686/video_bios.h
     src/i686/video_bios.s
+    src/general/bt_util.c
+    src/include/bt_util.h
     src/include/btstdbeg.h
     src/include/btstdend.h
+    src/include/gpt.h
     src/include/string.h
     src/include/stdlib.h
     src/main.cpp

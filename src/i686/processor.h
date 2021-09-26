@@ -2,6 +2,7 @@
 #define PROCESSOR_H
 
 #include <stdint.h>
+#include "bt_util.h"
 
 typedef enum i686_SegTypeFlag {
 
@@ -56,18 +57,18 @@ typedef struct i686_Descriptor {
 #define i686_internal_MakeGateDescriptor(offset, segsel, dpl, typeflags) {\
     .low = ((uint32_t)(offset) & 0xFFFFU) | (((uint32_t)(segsel) & 0xFFFFU) << 16U),\
     .high = ((uint32_t)(offset) & 0xFFFF0000U) | \
-    ((uint32_t)(typeflags) & 0x8B00) | I686_GateType_Common | (((uint32_t)(dpl) & 3) << 13) }
+    ((uint32_t)(typeflags) & 0x8B00) | i686_GateType_Common | (((uint32_t)(dpl) & 3) << 13) }
 
 #ifndef __cplusplus
 #define i686_MakeSegDescriptor(base, limit, dpl, typeflags) i686_internal_MakeSegDescriptor(base, limit, dpl, typeflags)
 #define i686_MakeGateDescriptor(offset, segsel, dpl, typeflags) i686_internal_MakeSegDescriptor(offset, segsel, dpl, typeflags)
 #else
-constexpr i686_Descriptor i686_MakeSegDescriptor(uint32_t base, uint32_t limit, uint32_t dpl, uint32_t typeflags)
+constexpr inline i686_Descriptor i686_MakeSegDescriptor(uint32_t base, uint32_t limit, uint32_t dpl, uint32_t typeflags)
 {
     return i686_internal_MakeSegDescriptor(base, limit, dpl, typeflags);
 }
 #undef i686_internal_MakeSegDescriptor
-constexpr i686_Descriptor i686_MakeGateDescriptor(uint32_t offset, uint32_t segsel, uint32_t dpl, uint32_t typeflags)
+constexpr inline i686_Descriptor i686_MakeGateDescriptor(uint32_t offset, uint32_t segsel, uint32_t dpl, uint32_t typeflags)
 {
     return i686_internal_MakeGateDescriptor(offset, segsel, dpl, typeflags);
 }
@@ -113,5 +114,16 @@ typedef struct i686_tss {
 } i686_tss;
 
 #define i686_Interrupt __attribute__((interrupt))
+
+BOOT_STRUCT(i686_FarPtr) {
+    uint16_t ptr;
+    uint16_t seg;
+};
+
+inline void *i686_LoadPointer(i686_FarPtr fptr) {
+    uintptr_t ptr = fptr.seg;
+    ptr = (ptr << 4) + fptr.ptr;
+    return (void*)ptr;
+}
 
 #endif // PROCESSOR_H

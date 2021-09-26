@@ -45,22 +45,18 @@ start32:
         movzx   eax, dx
         xor     ebp, ebp
         shl     eax, 10
-        lea     esp, [esp - 12]
+        lea     esp, [esp - 16]
         mov     heap_end, eax
         mov     dword ptr [esp], offset __bss_start
         mov     dword ptr 4[esp], 0x0
         mov     dword ptr 8[esp], offset __bss_size
         call    memset
-#        mov     dword ptr [esp], offset __start_eh_frame
-#        call    __register_frame
-#        call    _ctors
         lea     esp, [esp + 12]
-        call    boot_InitBuddyAlloc
-        call    _init
-        call    boot_main
-        call    _fini
-#        call    _dtors
+        jmp     c_start
 
+.global _Exit
+.type _Exit, @function
+_Exit:
 .global abort
 .type abort, @function
 abort:

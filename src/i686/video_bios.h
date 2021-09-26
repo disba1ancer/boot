@@ -4,26 +4,45 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdalign.h>
+#include "bt_util.h"
+#include "processor.h"
 
 enum i686_VideoBIOS_WrStrMode {
     i686_VideoBIOS_WrStrMode_UpdateCursor = 1,
     i686_VideoBIOS_WrStrMode_WithAttribute = 2,
 };
 
-typedef struct i686_VideoBIOS_VideoModeInfo {
+BOOT_STRUCT(i686_VideoBIOS_VideoModeInfo) {
     alignas(2)
     uint8_t mode;
     uint8_t cols;
     uint8_t page;
-} i686_VideoBIOS_VideoModeInfo;
+};
 
-typedef struct i686_VideoBIOS_CursorInfo {
+BOOT_STRUCT(i686_VideoBIOS_CursorInfo) {
     alignas(2)
     uint8_t endCursorScanline;
     uint8_t startCursorScanline;
     uint8_t column;
     uint8_t row;
-} i686_VideoBIOS_CursorInfo;
+};
+
+BOOT_STRUCT(i686_vbe_Info) {
+    char magic[4];
+    uint16_t version;
+    i686_FarPtr oemStr;
+    uint16_t flagsLow;
+    uint16_t flagsHigh;
+    i686_FarPtr videoModes;
+    uint16_t vmem;
+    uint16_t oemSoftVer;
+    i686_FarPtr vendorName;
+    i686_FarPtr productName;
+    i686_FarPtr revisionStr;
+    uint16_t verUnkn;
+    i686_FarPtr accelVModes;
+    unsigned char reserved[216 + 256];
+};
 
 #ifdef __cplusplus
 extern "C" {
@@ -33,7 +52,7 @@ void i686_VideoBIOS_WriteString(int mode, int pageNum, int color, size_t stringS
 i686_VideoBIOS_VideoModeInfo i686_VideoBIOS_GetVideoMode(void);
 i686_VideoBIOS_CursorInfo i686_VideoBIOS_GetCursorPosSize(void);
 
-void i686_vbe_GetInformation(void *buf);
+void i686_vbe_GetInformation(i686_vbe_Info *buf);
 
 #ifdef __cplusplus
 } // extern "C"
@@ -58,7 +77,9 @@ inline CursorInfo GetCursorPosSize() /*noexcept*/ { return i686_VideoBIOS_GetCur
 
 namespace i686::vbe {
 
-inline void GetInformation(void *buf) { i686_vbe_GetInformation(buf); }
+using Info = i686_vbe_Info;
+
+inline void GetInformation(Info &buf) { i686_vbe_GetInformation(&buf); }
 
 }
 
