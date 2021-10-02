@@ -6,7 +6,7 @@
 i686_VideoBIOS_WriteString:
         push    ebp
         mov     ebp, esp
-        sub     esp, 12
+        lea     esp, -12[esp]
         mov     8[esp], ebx
         mov     dword ptr 4[esp], offset 0f
         mov     dword ptr 0[esp], offset write_string_realmode
@@ -47,7 +47,7 @@ write_string_realmode:
 
 .global i686_VideoBIOS_GetVideoMode
 i686_VideoBIOS_GetVideoMode:
-        sub     esp, 12
+        lea     esp, -12[esp]
         mov     8[esp], ebx
         mov     dword ptr 4[esp], offset 0f
         mov     dword ptr 0[esp], offset get_video_mode_realmode
@@ -70,9 +70,9 @@ get_video_mode_realmode:
 .text
 .code32
 
-.global i686_VideoBIOS_GetCursorPosSize
-i686_VideoBIOS_GetCursorPosSize:
-        sub     esp, 12
+.global i686_VideoBIOS_GetCursorPosShape
+i686_VideoBIOS_GetCursorPosShape:
+        lea     esp, -12[esp]
         mov     8[esp], ebx
         mov     dword ptr 4[esp], offset 0f
         mov     dword ptr 0[esp], offset get_cursor_realmode
@@ -94,6 +94,51 @@ get_cursor_realmode:
 .text
 .code32
 
+.global i686_VideoBIOS_SetCursorShape
+i686_VideoBIOS_SetCursorShape:
+        mov     ch, 4[esp]
+        mov     cl, 8[esp]
+        lea     esp, -8[esp]
+        mov     dword ptr 4[esp], offset 0f
+        mov     dword ptr 0[esp], offset set_cursor_realmode
+        jmp     I686_EnterRealMode
+0:      ret
+
+.section .text16, "ax"
+.code16
+
+set_cursor_realmode:
+        mov     ax, 0x100
+        int     0x10
+        jmp     I686_EnterProtMode
+
+.text
+.code32
+
+.global i686_VideoBIOS_SetCursorPos
+i686_VideoBIOS_SetCursorPos:
+        mov     dh, 8[esp]
+        mov     dl, 12[esp]
+        lea     esp, -12[esp]
+        mov     dword ptr 8[esp], ebx
+        mov     bl, 16[esp]
+        mov     dword ptr 4[esp], offset 0f
+        mov     dword ptr 0[esp], offset set_cursorpos_realmode
+        jmp     I686_EnterRealMode
+0:      pop     ebx
+        ret
+
+.section .text16, "ax"
+.code16
+
+set_cursorpos_realmode:
+        mov     ax, 0x200
+        int     0x10
+        jmp     I686_EnterProtMode
+
+.text
+.code32
+
 .global i686_vbe_GetInformation
 i686_vbe_GetInformation:
         buf = 8
@@ -104,7 +149,7 @@ i686_vbe_GetInformation:
         shl     eax, 12
         shr     ax, 12
         mov     buf[ebp], eax
-        sub     esp, 12
+        lea     esp, -12[esp]
         mov     8[esp], edi
         mov     dword ptr 4[esp], offset 0f
         mov     dword ptr 0[esp], offset vbe_get_info_rm
@@ -120,6 +165,41 @@ i686_vbe_GetInformation:
 vbe_get_info_rm:
         les     di, buf[bp]
         mov     ax, 0x4F00
+        int     0x10
+        mov     dx, ax
+        jmp     I686_EnterProtMode
+
+.text
+.code32
+
+.global i686_vbe_GetModeInfo
+i686_vbe_GetModeInfo:
+        mode = 8
+        buf = 12
+
+        push    ebp
+        mov     ebp, esp
+        mov     eax, buf[ebp]
+        mov     ecx, mode[ebp]
+        shl     eax, 12
+        shr     ax, 12
+        mov     buf[ebp], eax
+        lea     esp, -12[esp]
+        mov     8[esp], edi
+        mov     dword ptr 4[esp], offset 0f
+        mov     dword ptr 0[esp], offset vbe_get_modeinfo_rm
+        jmp     I686_EnterRealMode
+0:      movzx   eax, dx
+        pop     edi
+        pop     ebp
+        ret
+
+.section .text16, "ax"
+.code16
+
+vbe_get_modeinfo_rm:
+        les     di, buf[bp]
+        mov     ax, 0x4F01
         int     0x10
         mov     dx, ax
         jmp     I686_EnterProtMode

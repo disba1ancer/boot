@@ -51,8 +51,8 @@ start32:
         mov     dword ptr 4[esp], 0x0
         mov     dword ptr 8[esp], offset __bss_size
         call    memset
-        lea     esp, [esp + 12]
-        jmp     c_start
+        lea     esp, [esp + 16]
+        call    c_start
 
 .global _Exit
 .type _Exit, @function

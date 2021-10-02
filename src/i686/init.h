@@ -1,7 +1,7 @@
 #ifndef INIT_H
 #define INIT_H
 
-#include "gpt.h"
+#include "boot/gpt.h"
 
 BOOT_STRUCT(boot_StartupInfo) {
     uint16_t pnpPtr[2];

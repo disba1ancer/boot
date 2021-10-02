@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <stdalign.h>
 #include "membios.h"
-#include "bt_util.h"
+#include "boot/util.h"
 #include "alloc.h"
 
 #define BOOT_ALLOC_BLOCK_LOG_SIZE ((size_t)4U)

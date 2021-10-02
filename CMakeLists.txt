@@ -28,7 +28,7 @@ execute_process(
 
 set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} -nostdlib -Wa,--divide")
 set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}   -nostdlib -ffreestanding -Wall -Wextra -pedantic -pedantic-errors")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -nostdlib -ffreestanding -Wall -Wextra -pedantic -pedantic-errors") #-fno-exceptions -fno-rtti
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -nostdlib -ffreestanding -fno-exceptions -Wall -Wextra -pedantic -pedantic-errors") #-fno-rtti
 
 set(CMAKE_ASM_LINK_EXECUTABLE "<CMAKE_ASM_COMPILER> <FLAGS> <CMAKE_ASM_LINK_FLAGS> <LINK_FLAGS> ${CMAKE_BINARY_DIR}/crti.o ${BOOT_CRTBEGIN} <OBJECTS> -o <TARGET> <LINK_LIBRARIES> ${BOOT_CRTEND} ${CMAKE_BINARY_DIR}/crtn.o")
 set(CMAKE_C_LINK_EXECUTABLE   "<CMAKE_C_COMPILER>   <FLAGS> <CMAKE_C_LINK_FLAGS>   <LINK_FLAGS> ${CMAKE_BINARY_DIR}/crti.o ${BOOT_CRTBEGIN} <OBJECTS> -o <TARGET> <LINK_LIBRARIES> ${BOOT_CRTEND} ${CMAKE_BINARY_DIR}/crtn.o")
@@ -46,8 +46,14 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(BOOT_LINKER_SCRIPT src/ldscripts/i686.ld)
 
 add_executable(boot
+    src/i686/Conout_impl.h
+    src/i686/Conout_impl.cpp
     src/i686/alloc.c
     src/i686/alloc.h
+    src/i686/bios_kbrd.h
+    src/i686/bios_kbrd.s
+    src/i686/bios_video.h
+    src/i686/bios_video.s
 #    src/i686/ctordtor.c
     src/i686/exit.c
     src/i686/init.c
@@ -62,22 +68,29 @@ add_executable(boot
     src/i686/mode_switch.s
     src/i686/processor.c
     src/i686/processor.h
-    src/i686/video_bios.h
-    src/i686/video_bios.s
-    src/general/bt_util.c
-    src/include/bt_util.h
-    src/include/btstdbeg.h
-    src/include/btstdend.h
-    src/include/gpt.h
-    src/include/string.h
-    src/include/stdlib.h
+    src/i686/vgacon.h
+    src/i686/vgacon.s
+    src/boot/Conout.cpp
+    src/boot/Conout.hpp
+    src/boot/UniquePtr.h
+    src/boot/conout.h
+    src/boot/gpt.h
+    src/boot/util.c
+    src/boot/util.h
+    src/btstdbeg.h
+    src/btstdend.h
+    src/string.h
+    src/stdlib.h
     src/main.cpp
     ${BOOT_LINKER_SCRIPT}
 )
 target_compile_options(boot PRIVATE
     -mgeneral-regs-only
 )
-target_include_directories(boot PRIVATE src/include)
+target_include_directories(boot PRIVATE
+    src
+    ${CMAKE_BINARY_DIR}/include
+)
 target_link_options(boot PRIVATE
     -T ${CMAKE_SOURCE_DIR}/${BOOT_LINKER_SCRIPT}
 )

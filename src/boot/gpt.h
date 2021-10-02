@@ -1,7 +1,7 @@
 #ifndef GPT_H
 #define GPT_H
 
-#include "bt_util.h"
+#include "util.h"
 #include <stdint.h>
 
 #include "btstdbeg.h"

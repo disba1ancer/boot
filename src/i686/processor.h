@@ -2,7 +2,7 @@
 #define PROCESSOR_H
 
 #include <stdint.h>
-#include "bt_util.h"
+#include "boot/util.h"
 
 typedef enum i686_SegTypeFlag {
 
@@ -115,15 +115,22 @@ typedef struct i686_tss {
 
 #define i686_Interrupt __attribute__((interrupt))
 
-BOOT_STRUCT(i686_FarPtr) {
+BOOT_STRUCT(i686_RMPtr) {
     uint16_t ptr;
     uint16_t seg;
 };
 
-inline void *i686_LoadPointer(i686_FarPtr fptr) {
+inline void *i686_LoadPointer(i686_RMPtr fptr) {
     uintptr_t ptr = fptr.seg;
     ptr = (ptr << 4) + fptr.ptr;
     return (void*)ptr;
 }
+
+#ifdef __cplusplus
+template <typename T>
+T* i686_LoadPointer(i686_RMPtr fptr) {
+    return static_cast<T*>(i686_LoadPointer(fptr));
+}
+#endif
 
 #endif // PROCESSOR_H
