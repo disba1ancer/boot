@@ -7,25 +7,25 @@
 #include "boot/util.h"
 #include "processor.h"
 
-enum i686_VideoBIOS_WrStrMode {
+enum i686_bios_video_WrStrMode {
     i686_VideoBIOS_WrStrMode_UpdateCursor = 1,
     i686_VideoBIOS_WrStrMode_WithAttribute = 2,
 };
 
-enum i686_VideoBIOS_CursorMode {
+enum i686_bios_video_CursorMode {
     i686_VideoBIOS_CursorMode_Normal = 0,
     i686_VideoBIOS_CursorMode_Invisible = 1 << 5,
     i686_VideoBIOS_CursorMode_Mask = 3 << 5,
 };
 
-BOOT_STRUCT(i686_VideoBIOS_VideoModeInfo) {
+BOOT_STRUCT(i686_bios_video_ModeInfo) {
     alignas(2)
     uint8_t mode;
     uint8_t cols;
     uint8_t page;
 };
 
-BOOT_STRUCT(i686_VideoBIOS_CursorInfo) {
+BOOT_STRUCT(i686_bios_video_CursorInfo) {
     alignas(2)
     uint8_t endCursorScanline;
     uint8_t startCursorScanline;
@@ -121,11 +121,13 @@ enum i686_vbe_constants {
 extern "C" {
 #endif
 
-void i686_VideoBIOS_WriteString(int mode, int pageNum, int color, size_t stringSize, int row, int column, const char *str);
-i686_VideoBIOS_VideoModeInfo i686_VideoBIOS_GetVideoMode(void);
-i686_VideoBIOS_CursorInfo i686_VideoBIOS_GetCursorPosShape(void);
-void i686_VideoBIOS_SetCursorShape(int startOpts, int end);
-void i686_VideoBIOS_SetCursorPos(int page, uint8_t row, uint8_t column);
+extern const unsigned char i686_vbe_rom[];
+
+void i686_bios_video_WriteString(int mode, int pageNum, int color, size_t stringSize, int row, int column, const char *str);
+i686_bios_video_ModeInfo i686_bios_video_GetVideoMode(void);
+i686_bios_video_CursorInfo i686_bios_video_GetCursorPosShape(void);
+void i686_bios_video_SetCursorShape(int startOpts, int end);
+void i686_bios_video_SetCursorPos(int page, uint8_t row, uint8_t column);
 
 void i686_vbe_GetInformation(i686_vbe_Info *buf);
 void i686_vbe_GetModeInfo(uint16_t mode, i686_vbe_ModeInfo *buf);
@@ -133,7 +135,7 @@ void i686_vbe_GetModeInfo(uint16_t mode, i686_vbe_ModeInfo *buf);
 #ifdef __cplusplus
 } // extern "C"
 
-namespace i686::VideoBIOS {
+namespace i686::bios::video {
 
 enum WrStrMode {
     WrStrMode_UpdateCursor = i686_VideoBIOS_WrStrMode_UpdateCursor,
@@ -144,16 +146,14 @@ enum CursorMode {
     CursorMode_Invisible = i686_VideoBIOS_CursorMode_Invisible,
     CursorMode_Mask = i686_VideoBIOS_CursorMode_Mask,
 };
-using VideoModeInfo = i686_VideoBIOS_VideoModeInfo;
-using CursorInfo = i686_VideoBIOS_CursorInfo;
+using VideoModeInfo = i686_bios_video_ModeInfo;
+using CursorInfo = i686_bios_video_CursorInfo;
 
-inline void WriteString(int mode, int pageNum, int color, size_t stringSize, int row, int column, const char *str) noexcept
-{ i686_VideoBIOS_WriteString(mode, pageNum, color, stringSize, row, column, str); }
-
-inline auto GetVideoMode() noexcept -> VideoModeInfo { return i686_VideoBIOS_GetVideoMode(); }
-inline auto GetCursorPosShape() noexcept -> CursorInfo { return i686_VideoBIOS_GetCursorPosShape(); }
-inline void SetCursorShape(int startOpts, int end) noexcept { i686_VideoBIOS_SetCursorShape(startOpts, end); }
-inline void SetCursorPos(int page, uint8_t row, uint8_t column) noexcept { i686_VideoBIOS_SetCursorPos(page, row, column); }
+inline constexpr auto &WriteString = i686_bios_video_WriteString;
+inline constexpr auto &GetVideoMode = i686_bios_video_GetVideoMode;
+inline constexpr auto &GetCursorPosShape = i686_bios_video_GetCursorPosShape;
+inline constexpr auto &SetCursorShape = i686_bios_video_SetCursorShape;
+inline constexpr auto &SetCursorPos = i686_bios_video_SetCursorPos;
 
 }
 
@@ -183,8 +183,10 @@ enum Mode {
     Mode_DualDispStartAddr = i686_vbe_Mode_DualDispStartAddr,
 };
 
-inline void GetInformation(Info &buf) noexcept { i686_vbe_GetInformation(&buf); }
-inline void GetModeInfo(uint16_t mode, ModeInfo &buf) noexcept { i686_vbe_GetModeInfo(mode, &buf); }
+inline constexpr auto &rom = i686_vbe_rom;
+
+inline constexpr auto &GetInformation = i686_vbe_GetInformation;
+inline constexpr auto &GetModeInfo = i686_vbe_GetModeInfo;
 
 }
 

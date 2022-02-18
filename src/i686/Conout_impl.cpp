@@ -1,6 +1,7 @@
 #include "Conout_impl.h"
-#include <new>
 #include "vgacon.h"
+#include <stdlib.h>
+#include <new>
 
 namespace boot {
 
@@ -21,7 +22,7 @@ void Conout_impl::Render()
     auto row = cursor / modeInfo.cols;
     auto newRow = row - startRow;
     newRow += rows * (newRow > row);
-    i686::VideoBIOS::SetCursorPos(modeInfo.page, newRow, col);
+    i686::bios::video::SetCursorPos(modeInfo.page, newRow, col);
 }
 
 void Conout_impl::PutC_intern(char c)
@@ -33,6 +34,16 @@ void Conout_impl::PutC_intern(char c)
             break;
         case '\r':
             cursor -= cursor % modeInfo.cols;
+            return;
+        case '\b':
+            if (cursor != startRow * modeInfo.cols) {
+                if (cursor == 0) {
+                    cursor = bufferSize - 1;
+                } else {
+                    --cursor;
+                }
+            }
+            buffer[cursor] = 0x700;
             return;
         default:
             buffer[cursor++] = 0x700 + ((unsigned char)c);
@@ -49,12 +60,15 @@ void Conout_impl::PutC_intern(char c)
 }
 
 Conout_impl::Conout_impl() :
-    modeInfo(i686::VideoBIOS::GetVideoMode()),
+    modeInfo(i686::bios::video::GetVideoMode()),
     bufferSize(modeInfo.cols * rows),
-    buffer(new (std::nothrow) uint16_t[bufferSize]),
+    buffer(new uint16_t[bufferSize]),
     startRow(0),
     cursor(0)
 {
+    if (!buffer) {
+        abort();
+    }
     auto end = buffer.Get() + bufferSize;
     for(auto i = buffer.Get(); i != end; ++i) {
         *i = 0x700;

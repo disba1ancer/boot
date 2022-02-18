@@ -2,15 +2,17 @@
 #include "i686/bios_video.h"
 #include "i686/membios.h"
 #include "i686/init.h"
+#include "i686/bios_disk.h"
 #include "boot/gpt.h"
-#include <cstddef>
-#include <cstdlib>
+#include <stddef.h>
+#include <stdlib.h>
 #include <stdlib.h>
 #include <string.h>
 #include "boot/Conout.hpp"
 #include "i686/bios_kbrd.h"
+#include "i686/PartitionDevice.h"
 
-char str[] = "Hello, World!\r\n";
+char str[] = "Hello, World!\n";
 
 char* u64toha(char* buf, size_t size, uint64_t val) {
     static const char map[] = {
@@ -34,43 +36,40 @@ char* u64toha(char* buf, size_t size, uint64_t val) {
     return ptr;
 }
 
-extern "C" void boot_main(boot_StartupInfo *si [[maybe_unused]])
+using i686::bios::mem::MapEntry;
+
+extern "C" void boot_main(boot_StartupInfo *si [[maybe_unused]], size_t count, MapEntry *memmap)
 {
-    using namespace i686::VideoBIOS;
-    auto &out = boot::Conout::Instance();
+    using namespace i686::bios;
+    auto &out = boot::Conout::instance;
     out.PutStr(str);
-    i686_MemoryMapEntry entry;
-    unsigned context = 0;
-    int row = 0;
-    do {
-        i686_GetMemoryMap(&context, &entry);
-        char buf[17];
-        auto str = u64toha(buf, 17, entry.startRegion);
+    char buf[17];
+    for (size_t i = 0; i < count; ++i) {
+        auto str = u64toha(buf, 17, memmap[i].startRegion);
         out.PutStr(str);
         out.PutC(' ');
-        str = u64toha(buf, 17, entry.regionSize);
+        str = u64toha(buf, 17, memmap[i].regionSize);
         out.PutStr(str);
         out.PutC(' ');
-        str = u64toha(buf, 17, entry.type);
+        str = u64toha(buf, 17, memmap[i].type);
         out.PutStr(str);
         out.PutC(' ');
-        str = u64toha(buf, 17, entry.flags);
+        str = u64toha(buf, 17, memmap[i].flags);
         out.PutStr(str);
         out.PutC('\n');
-        ++row;
-    } while (context);
-    i686::vbe::Info vbeInfo;
-    memcpy(vbeInfo.magic, "VBE2", 4);
-    i686::vbe::GetInformation(vbeInfo);
-    auto modes = i686_LoadPointer<uint16_t>(vbeInfo.videoModes);
-    i686::vbe::ModeInfo modeInfo;
-    while (*modes != 0xFFFF) {
-        i686::vbe::GetModeInfo(*(modes++) | i686::vbe::LFB, modeInfo);
     }
     while (true) {
-        using namespace i686::bios::kbrd;
-        auto key = GetKey();
-        if (key.scanCode == 1) break;
+        auto key = kbrd::GetKey();
+        switch (key.ascii) {
+            case 4:
+            case 3:
+                goto whileEnd;
+        }
         out.PutC(key.ascii);
-    }
+    } whileEnd:
+    boot::UniquePtr<unsigned char[]> fbuf = new unsigned char[65536];
+
+    memset(fbuf.Get(), 0, 65535);
+    i686::PartitionDevice part(si->diskNum, &si->part);
+    part.Read(fbuf.Get(), 0, 128);
 }

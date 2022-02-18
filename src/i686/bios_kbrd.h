@@ -22,7 +22,7 @@ namespace i686::bios::kbrd {
 
 using Key = i686_bios_kbrd_Key;
 
-inline Key GetKey() { return i686_bios_kbrd_GetKey(); }
+inline constexpr auto &GetKey = i686_bios_kbrd_GetKey;
 
 }
 

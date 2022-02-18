@@ -36,21 +36,23 @@ data32  push    offset start32
 .section .text16, "ax"
 .code16
 
-_end:   hlt
-        jmp     _end
+_end:   int     0x18
+#        hlt
+#        jmp     _end
 
 .text
 .code32
 start32:
-        movzx   eax, dx
-        xor     ebp, ebp
-        shl     eax, 10
         lea     esp, [esp - 16]
-        mov     heap_end, eax
+        xor     ebp, ebp
         mov     dword ptr [esp], offset __bss_start
+        movzx   ebx, dx
         mov     dword ptr 4[esp], 0x0
+        and     ebx, -4
         mov     dword ptr 8[esp], offset __bss_size
+        shl     ebx, 10
         call    memset
+        mov     heap_end, ebx
         lea     esp, [esp + 16]
         call    c_start
 
@@ -65,11 +67,3 @@ abort:
 #        mov     esp, 0xFFFC
 #        mov     [esp], offset _end
 #        jmp     I686_EnterRealMode
-
-.data
-.global heap_start
-heap_start:
-        .4byte  __bss_end
-.global heap_end
-heap_end:
-        .4byte  __bss_end

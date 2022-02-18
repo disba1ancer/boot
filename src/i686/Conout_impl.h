@@ -11,7 +11,7 @@ class Conout_impl
 public:
     using From = Conout::From;
 private:
-    using VideoModeInfo = i686::VideoBIOS::VideoModeInfo;
+    using VideoModeInfo = i686::bios::video::VideoModeInfo;
     static constexpr std::size_t rows = 25;
     VideoModeInfo modeInfo;
     std::size_t bufferSize;

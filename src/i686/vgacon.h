@@ -14,7 +14,7 @@ extern volatile uint16_t i686_vga_console[0x8000 / sizeof(uint16_t)];
 
 namespace i686::vga {
 
-inline auto& console = i686_vga_console;
+inline constexpr auto& console = i686_vga_console;
 
 }
 

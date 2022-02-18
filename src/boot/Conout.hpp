@@ -23,7 +23,10 @@ private:
     UniquePtr<Conout_impl> impl;
     Conout();
 public:
-    static auto Instance() -> Conout&;
+    Conout(Conout&&) = delete;
+    Conout &operator=(Conout&&) = delete;
+    static Conout instance;
+//    static auto Instance() -> Conout&;
     void PutC(char c);
     void Write(const char *buf, std::size_t size);
     void PutStr(const char *str);

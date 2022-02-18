@@ -126,6 +126,12 @@ inline void *i686_LoadPointer(i686_RMPtr fptr) {
     return (void*)ptr;
 }
 
+inline i686_RMPtr i686_MakeRMPointer(void *ptr) {
+    uintptr_t fptr = (uintptr_t)ptr;
+    i686_RMPtr rslt = { .ptr = (uint16_t)(fptr & 0xF), .seg = (uint16_t)(fptr >> 4) };
+    return rslt;
+}
+
 #ifdef __cplusplus
 template <typename T>
 T* i686_LoadPointer(i686_RMPtr fptr) {

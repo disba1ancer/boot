@@ -6,11 +6,11 @@ set(CMAKE_SYSTEM_NAME elf)
 
 #execute_process(
 #    COMMAND
-#        ${CMAKE_ASM_COMPILER} -Wa,--divide -c ${CMAKE_SOURCE_DIR}/src/i686/crti.s -o ${CMAKE_BINARY_DIR}/crti.o
+#        ${CMAKE_ASM_COMPILER} -Wa,--divide -g -c ${CMAKE_SOURCE_DIR}/src/i686/crti.s -o ${CMAKE_BINARY_DIR}/crti.o
 #)
 #execute_process(
 #    COMMAND
-#        ${CMAKE_ASM_COMPILER} -Wa,--divide -c ${CMAKE_SOURCE_DIR}/src/i686/crtn.s -o ${CMAKE_BINARY_DIR}/crtn.o
+#        ${CMAKE_ASM_COMPILER} -Wa,--divide -g -c ${CMAKE_SOURCE_DIR}/src/i686/crtn.s -o ${CMAKE_BINARY_DIR}/crtn.o
 #)
 
 execute_process(
@@ -28,7 +28,7 @@ execute_process(
 
 set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} -nostdlib -Wa,--divide")
 set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}   -nostdlib -ffreestanding -Wall -Wextra -pedantic -pedantic-errors")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -nostdlib -ffreestanding -fno-exceptions -Wall -Wextra -pedantic -pedantic-errors") #-fno-rtti
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -nostdlib -ffreestanding -Wall -Wextra -pedantic -pedantic-errors -fno-exceptions") # -fno-rtti
 
 set(CMAKE_ASM_LINK_EXECUTABLE "<CMAKE_ASM_COMPILER> <FLAGS> <CMAKE_ASM_LINK_FLAGS> <LINK_FLAGS> ${CMAKE_BINARY_DIR}/crti.o ${BOOT_CRTBEGIN} <OBJECTS> -o <TARGET> <LINK_LIBRARIES> ${BOOT_CRTEND} ${CMAKE_BINARY_DIR}/crtn.o")
 set(CMAKE_C_LINK_EXECUTABLE   "<CMAKE_C_COMPILER>   <FLAGS> <CMAKE_C_LINK_FLAGS>   <LINK_FLAGS> ${CMAKE_BINARY_DIR}/crti.o ${BOOT_CRTBEGIN} <OBJECTS> -o <TARGET> <LINK_LIBRARIES> ${BOOT_CRTEND} ${CMAKE_BINARY_DIR}/crtn.o")
@@ -50,6 +50,8 @@ add_executable(boot
     src/i686/Conout_impl.cpp
     src/i686/alloc.c
     src/i686/alloc.h
+    src/i686/bios_disk.h
+    src/i686/bios_disk.s
     src/i686/bios_kbrd.h
     src/i686/bios_kbrd.s
     src/i686/bios_video.h
@@ -66,10 +68,14 @@ add_executable(boot
     src/i686/mode_switch.c
     src/i686/mode_switch.h
     src/i686/mode_switch.s
+    src/i686/new.cpp
+    src/i686/PartitionDevice.h
+    src/i686/PartitionDevice.cpp
     src/i686/processor.c
     src/i686/processor.h
     src/i686/vgacon.h
     src/i686/vgacon.s
+    src/boot/IBlockDevice.h
     src/boot/Conout.cpp
     src/boot/Conout.hpp
     src/boot/UniquePtr.h
@@ -77,6 +83,7 @@ add_executable(boot
     src/boot/gpt.h
     src/boot/util.c
     src/boot/util.h
+    src/boot/qsort.c
     src/btstdbeg.h
     src/btstdend.h
     src/string.h

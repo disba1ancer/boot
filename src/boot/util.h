@@ -2,6 +2,7 @@
 #define BT_UTIL_H
 
 #include <stddef.h>
+#include <stdlib.h>
 
 #define BOOT_STRUCT(name) \
     typedef struct name name; \
@@ -22,6 +23,10 @@ BOOT_STRUCT(DoublyLinkedList) {
 
 //void DoublyLinkedList_Add(DoublyLinkedList *list, DoublyLinkedListElement *elem);
 //void DoublyLinkedList_Remove(DoublyLinkedList *list, DoublyLinkedListElement *elem);
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 inline void DoublyLinkedList_Add(DoublyLinkedList *list, DoublyLinkedListElement *elem)
 {
@@ -44,5 +49,9 @@ inline void DoublyLinkedList_Remove(DoublyLinkedList *list, DoublyLinkedListElem
         elem->next->prev = elem->prev;
     }
 }
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
 
 #endif // BT_UTIL_H

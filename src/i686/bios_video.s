@@ -2,8 +2,8 @@
 .text
 .code32
 
-.global i686_VideoBIOS_WriteString
-i686_VideoBIOS_WriteString:
+.global i686_bios_video_WriteString
+i686_bios_video_WriteString:
         push    ebp
         mov     ebp, esp
         lea     esp, -12[esp]
@@ -45,8 +45,8 @@ write_string_realmode:
 .text
 .code32
 
-.global i686_VideoBIOS_GetVideoMode
-i686_VideoBIOS_GetVideoMode:
+.global i686_bios_video_GetVideoMode
+i686_bios_video_GetVideoMode:
         lea     esp, -12[esp]
         mov     8[esp], ebx
         mov     dword ptr 4[esp], offset 0f
@@ -70,8 +70,8 @@ get_video_mode_realmode:
 .text
 .code32
 
-.global i686_VideoBIOS_GetCursorPosShape
-i686_VideoBIOS_GetCursorPosShape:
+.global i686_bios_video_GetCursorPosShape
+i686_bios_video_GetCursorPosShape:
         lea     esp, -12[esp]
         mov     8[esp], ebx
         mov     dword ptr 4[esp], offset 0f
@@ -94,8 +94,8 @@ get_cursor_realmode:
 .text
 .code32
 
-.global i686_VideoBIOS_SetCursorShape
-i686_VideoBIOS_SetCursorShape:
+.global i686_bios_video_SetCursorShape
+i686_bios_video_SetCursorShape:
         mov     ch, 4[esp]
         mov     cl, 8[esp]
         lea     esp, -8[esp]
@@ -115,13 +115,13 @@ set_cursor_realmode:
 .text
 .code32
 
-.global i686_VideoBIOS_SetCursorPos
-i686_VideoBIOS_SetCursorPos:
+.global i686_bios_video_SetCursorPos
+i686_bios_video_SetCursorPos:
         mov     dh, 8[esp]
         mov     dl, 12[esp]
         lea     esp, -12[esp]
         mov     dword ptr 8[esp], ebx
-        mov     bl, 16[esp]
+        mov     bh, 16[esp]
         mov     dword ptr 4[esp], offset 0f
         mov     dword ptr 0[esp], offset set_cursorpos_realmode
         jmp     I686_EnterRealMode
@@ -203,3 +203,6 @@ vbe_get_modeinfo_rm:
         int     0x10
         mov     dx, ax
         jmp     I686_EnterProtMode
+
+.global i686_vbe_rom
+i686_vbe_rom = 0xC0000

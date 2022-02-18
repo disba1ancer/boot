@@ -1,18 +1,26 @@
 #include "Conout.hpp"
-#include <new>
 #include "i686/Conout_impl.h"
+#include <stdlib.h>
+#include <type_traits>
+#include <new>
 
 namespace boot {
 
-Conout::Conout() :
-    impl(new(std::nothrow) Conout_impl())
-{}
+Conout Conout::instance;
 
-auto Conout::Instance() -> Conout&
+Conout::Conout() :
+    impl(new Conout_impl())
 {
-    static Conout instance = {};
-    return instance;
+    if (!impl) {
+        abort();
+    }
 }
+
+//auto Conout::Instance() -> Conout&
+//{
+//    static Conout instance;
+//    return instance;
+//}
 
 void Conout::PutC(char c)
 {

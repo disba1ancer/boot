@@ -1,8 +1,8 @@
 .intel_syntax noprefix
 .text
 
-.global i686_GetMemoryMap
-i686_GetMemoryMap:
+.global i686_bios_mem_GetMap
+i686_bios_mem_GetMap:
         push    ebp
         mov     ebp, esp
         lea     esp, [esp - 8]
@@ -23,10 +23,12 @@ i686_GetMemoryMap:
         push    offset memorymap_rm
         jmp     I686_EnterRealMode
 0:      mov     eax, context_ptr[ebp]
-        mov     edi, -4[ebp]
         mov     [eax], ebx
         movzx   eax, dx
+        mov     edi, -4[ebp]
+        and     eax, 1
         mov     ebx, -8[ebp]
+        xor     eax, 1
         leave
         ret
 
@@ -37,8 +39,6 @@ memorymap_rm:
         les     di, memchunk_ptr[bp]
         mov     eax, 0xE820
         int     0x15
-        jc      0f
-        or      dx, 1
-        jmp     I686_EnterProtMode
-0:      xor     dx, dx
+        lahf
+        movzx     dx, ah
         jmp     I686_EnterProtMode

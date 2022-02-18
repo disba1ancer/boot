@@ -23,9 +23,9 @@ size_t boot_conout_ChPerLine();
 } // extern "C"
 
 namespace boot::conout {
-inline void PutC(char c) noexcept { boot_conout_PutC(c); }
-inline void Write(char *buf, size_t size) noexcept { boot_conout_Write(buf, size); }
-inline void PutStr(char *str) noexcept { boot_conout_PutStr(str); }
+inline constexpr auto PutC = boot_conout_PutC;
+inline constexpr auto Write = boot_conout_Write;
+inline constexpr auto PutStr = boot_conout_PutStr;
 }
 
 #endif

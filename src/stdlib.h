@@ -12,6 +12,7 @@ BOOT_STD_NORETURN void _Exit(int exit_code);
 void *malloc(size_t size);
 void *realloc(void* ptr, size_t size);
 void free(void *ptr);
+void qsort(void* ptr, size_t count, size_t size, int (*comp)(const void*, const void*));
 
 #include "btstdend.h"
 
