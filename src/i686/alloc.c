@@ -17,7 +17,6 @@ static void *AllocFromRange(void **start, void *end, size_t size);
 static void *AllocFromRangePacked(void **start, void *end, size_t size);
 static void *AlignRangeStart(void *start, void *end);
 static void *boot_LinearAlloc(size_t size);
-static int bsrszt(size_t val);
 static uintptr_t AlignUp(uintptr_t val, size_t align);
 static void *AlignPtrUp(void *val, size_t align);
 static uintptr_t AlignDown(uintptr_t val, size_t align);
@@ -25,11 +24,11 @@ static void *AlignPtrDown(void *val, size_t align);
 static int toggleBit(unsigned char *val, size_t bitNum);
 
 BOOT_STRUCT(boot_BuddyFreeBlockHeader) {
-    DoublyLinkedListElement elem;
+    boot_DoublyLinkedListElement elem;
 };
 
 BOOT_STRUCT(boot_BuddyBlockStore) {
-    DoublyLinkedList freeList;
+    boot_DoublyLinkedList freeList;
     size_t pairBitmapStart;
 };
 
@@ -81,16 +80,6 @@ void *AlignRangeStart(void *start, void *end)
 void *boot_LinearAlloc(size_t size)
 {
     return AllocFromRange(&heap_start, heap_end, size);
-}
-
-int bsrszt(size_t val)
-{
-    int result = 0;
-    while (val != 1) {
-        val >>= 1;
-        ++result;
-    }
-    return result;
 }
 
 uintptr_t AlignUp(uintptr_t val, size_t align)
@@ -237,7 +226,7 @@ size_t MergeNormalRegions(i686_mem_entries *memmap) {
         if (last->startRegion + last->regionSize >= current->startRegion) {
             uint64_t a = current->startRegion - last->startRegion + current->regionSize;
             uint64_t b = last->regionSize;
-            last->regionSize = (a > b) ? a : b;
+            last->regionSize = boot_MaxU64(a, b);
 //            memset(current, 0, sizeof(i686_bios_mem_MapEntry));
         } else {
             ++lastMerged;
@@ -345,7 +334,7 @@ boot_BuddyRegion *boot_BuddyRegion_Construct(void *regionStart, void *regionEnd)
     }
     size_t regionBlockCount = region_size / BOOT_ALLOC_BLOCK_SIZE;
 
-    size_t maxOrder = (size_t)bsrszt(regionBlockCount * 2 - 1);
+    size_t maxOrder = (size_t)boot_Log2U64(regionBlockCount * 2 - 1);
     boot_BuddyRegion *buddyRegion;
     size_t buddyRegionSize = sizeof(boot_BuddyRegion) + sizeof(boot_BuddyBlockStore[maxOrder]);
     buddyRegion = AllocFromRange(&current, regionEnd, buddyRegionSize);
@@ -417,17 +406,17 @@ void *boot_BuddyRegion_AllocBlock(boot_BuddyRegion *region, size_t order)
     if (order >= region->maxOrder) {
         return NULL;
     }
-    DoublyLinkedList *list = &(region->buddyArray[order].freeList);
-    DoublyLinkedListElement *elem;
+    boot_DoublyLinkedList *list = &(region->buddyArray[order].freeList);
+    boot_DoublyLinkedListElement *elem;
     elem = list->begin;
     if (elem != NULL) {
-        DoublyLinkedList_Remove(list, elem);
+        boot_DoublyLinkedList_Remove(list, elem);
         boot_BuddyRegion_TogglePairBit(region, elem, order);
         return elem;
     } else {
         void *largeBlock = boot_BuddyRegion_AllocBlock(region, order + 1);
         if (largeBlock != NULL) {
-            DoublyLinkedList_Add(list, (void*)((byte*)largeBlock + (BOOT_ALLOC_BLOCK_SIZE << order)));
+            boot_DoublyLinkedList_Add(list, (void*)((byte*)largeBlock + (BOOT_ALLOC_BLOCK_SIZE << order)));
             boot_BuddyRegion_TogglePairBit(region, largeBlock, order);
         }
         return largeBlock;
@@ -442,20 +431,20 @@ void boot_BuddyRegion_FreeBlock(boot_BuddyRegion *region, void *block, size_t or
         boot_BuddyFreeBlockHeader *block;
         size_t mask = BOOT_ALLOC_BLOCK_SIZE << order;
         block = (void*)((byte*)region->start + (blockOffset ^ mask));
-        DoublyLinkedList_Remove(&(region->buddyArray[order].freeList), &(block->elem));
+        boot_DoublyLinkedList_Remove(&(region->buddyArray[order].freeList), &(block->elem));
         void *upOrderBlock = (void*)((byte*)region->start + (blockOffset & (~mask)));
         boot_BuddyRegion_FreeBlock(region, upOrderBlock, order + 1);
 
         return;
     }
-    DoublyLinkedList_Add(&(region->buddyArray[order].freeList), block);
+    boot_DoublyLinkedList_Add(&(region->buddyArray[order].freeList), block);
 }
 
 void *malloc(size_t size)
 {
     size = AlignUp(size, BOOT_ALLOC_BLOCK_SIZE);
     size = size / BOOT_ALLOC_BLOCK_SIZE + 1;
-    size_t order = (size_t)bsrszt(size * 2 - 1);
+    size_t order = (size_t)boot_Log2U64(size * 2 - 1);
     void* block = boot_BuddyRegion_AllocBlock(allocRegion, order);
     if (block == NULL) {
         return NULL;
@@ -471,7 +460,7 @@ static void *mextend(void* ptr, size_t size)
     }
     size = AlignUp(size, BOOT_ALLOC_BLOCK_SIZE);
     size = size / BOOT_ALLOC_BLOCK_SIZE + 1;
-    size_t reqOrder = (size_t)bsrszt(size * 2 - 1);
+    size_t reqOrder = (size_t)boot_Log2U64(size * 2 - 1);
     void *block = (byte*)ptr - BOOT_ALLOC_BLOCK_SIZE;
     size_t order = *((size_t*)block);
     return reqOrder <= order ? ptr : NULL;

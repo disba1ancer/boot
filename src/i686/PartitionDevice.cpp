@@ -15,12 +15,12 @@ PartitionDevice::PartitionDevice(int diskNum, boot::GPTPartition* partition) :
     blkSize = params.bytesPerSect;
 }
 
-size_t PartitionDevice::GetBlockSize()
+size_t PartitionDevice::GetBlockSize() const
 {
     return blkSize;
 }
 
-uint64_t PartitionDevice::GetBlockCount()
+uint64_t PartitionDevice::GetBlockCount() const
 {
     return partition->lastLBA - partition->firstLBA + 1;
 }

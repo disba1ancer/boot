@@ -1,7 +1,7 @@
 #ifndef BOOT_CONOUT_HPP
 #define BOOT_CONOUT_HPP
 
-#include "UniquePtr.h"
+#include "UniquePtr.hpp"
 
 namespace boot {
 

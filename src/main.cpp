@@ -11,6 +11,7 @@
 #include "boot/Conout.hpp"
 #include "i686/bios_kbrd.h"
 #include "i686/PartitionDevice.h"
+#include "ext2/Ext2Driver.h"
 
 char str[] = "Hello, World!\n";
 
@@ -67,9 +68,6 @@ extern "C" void boot_main(boot_StartupInfo *si [[maybe_unused]], size_t count, M
         }
         out.PutC(key.ascii);
     } whileEnd:
-    boot::UniquePtr<unsigned char[]> fbuf = new unsigned char[65536];
-
-    memset(fbuf.Get(), 0, 65535);
     i686::PartitionDevice part(si->diskNum, &si->part);
-    part.Read(fbuf.Get(), 0, 128);
+    boot::ext2::Ext2Driver ext2drv(&part);
 }

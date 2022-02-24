@@ -9,8 +9,8 @@ namespace i686 {
 struct PartitionDevice final : boot::IBlockDevice
 {
     PartitionDevice(int diskNum, boot::GPTPartition* partition);
-    auto GetBlockSize() -> size_t override;
-    auto GetBlockCount() -> uint64_t override;
+    auto GetBlockSize() const -> size_t override;
+    auto GetBlockCount() const -> uint64_t override;
     auto Read(unsigned char* buf, uint64_t blkNum, size_t blkCnt) -> BlockDeviceError override;
 private:
     int diskNum;

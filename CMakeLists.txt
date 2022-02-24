@@ -46,6 +46,22 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(BOOT_LINKER_SCRIPT src/ldscripts/i686.ld)
 
 add_executable(boot
+    src/boot/Conout.cpp
+    src/boot/conout.h
+    src/boot/Conout.hpp
+    src/boot/endian.c
+    src/boot/endian.h
+    src/boot/gpt.h
+    src/boot/IBlockDevice.h
+    src/boot/qsort.c
+    src/boot/UniquePtr.hpp
+    src/boot/util.c
+    src/boot/util.h
+    src/btstdbeg.h
+    src/btstdend.h
+    src/ext2/ext2.h
+    src/ext2/Ext2Driver.h
+    src/ext2/Ext2Driver.cpp
     src/i686/Conout_impl.h
     src/i686/Conout_impl.cpp
     src/i686/alloc.c
@@ -56,7 +72,6 @@ add_executable(boot
     src/i686/bios_kbrd.s
     src/i686/bios_video.h
     src/i686/bios_video.s
-#    src/i686/ctordtor.c
     src/i686/exit.c
     src/i686/init.c
     src/i686/init.h
@@ -75,20 +90,9 @@ add_executable(boot
     src/i686/processor.h
     src/i686/vgacon.h
     src/i686/vgacon.s
-    src/boot/IBlockDevice.h
-    src/boot/Conout.cpp
-    src/boot/Conout.hpp
-    src/boot/UniquePtr.h
-    src/boot/conout.h
-    src/boot/gpt.h
-    src/boot/util.c
-    src/boot/util.h
-    src/boot/qsort.c
-    src/btstdbeg.h
-    src/btstdend.h
+    src/main.cpp
     src/string.h
     src/stdlib.h
-    src/main.cpp
     ${BOOT_LINKER_SCRIPT}
 )
 target_compile_options(boot PRIVATE
