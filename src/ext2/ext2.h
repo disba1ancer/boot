@@ -9,6 +9,7 @@ enum ext2_ {
     ext2_ErrorFS = 2,
     ext2_SuperblockMagic = 0xEF53,
     ext2_GoodOldRev = 0,
+    ext2_GoodOldINodeSize = 128,
     ext2_DynamicRev = 1,
 };
 
@@ -55,6 +56,39 @@ enum ext2_Algorithm {
     ext2_Algorithm_GZIP = 4,
     ext2_Algorithm_BZIP2 = 8,
     ext2_Algorithm_LZO = 0x10,
+};
+
+enum ext2_INodes {
+    ext2_BadINode = 1,
+    ext2_RootINode = 2,
+    ext2_AclIdxINode = 3,
+    ext2_AclDataINode = 4,
+    ext2_BootINode = 5,
+    ext2_UnderDirINode = 6,
+};
+
+enum ext2_Mode {
+    ext2_Mode_TypeMask = 0xF000,
+    ext2_Mode_Sock = 0xC000,
+    ext2_Mode_SymLink = 0xA000,
+    ext2_Mode_File = 0x8000,
+    ext2_Mode_BlkDev = 0x6000,
+    ext2_Mode_Dir = 0x4000,
+    ext2_Mode_ChrDev = 0x2000,
+    ext2_Mode_FIFO = 0x1000,
+
+    ext2_Mode_UID = 04000,
+    ext2_Mode_GID = 02000,
+    ext2_Mode_Sticky = 01000,
+    ext2_Mode_RUsr = 0400,
+    ext2_Mode_WUsr = 0200,
+    ext2_Mode_XUsr = 0100,
+    ext2_Mode_RGrp =  040,
+    ext2_Mode_WGrp =  020,
+    ext2_Mode_XGrp =  010,
+    ext2_Mode_ROth =   04,
+    ext2_Mode_WOth =   02,
+    ext2_Mode_XOth =   01,
 };
 
 BOOT_STRUCT(ext2_Superblock) {
@@ -105,6 +139,45 @@ BOOT_STRUCT(ext2_Superblock) {
     alignas(4)
     boot_LE32U defaultMountOptions;
     boot_LE32U firstMetaBG;
+};
+
+BOOT_STRUCT(ext2_INode) {
+    boot_LE16U mode;
+    boot_LE16U uid;
+    boot_LE32U sizeLow;
+    boot_LE32U accessTime;
+    boot_LE32U createTime;
+    boot_LE32U modifyTime;
+    boot_LE32U deleteTime;
+    boot_LE16U gid;
+    boot_LE16U linksCount;
+    boot_LE32U sectors;
+    boot_LE32U flags;
+    boot_LE32U osd1;
+    union {
+        unsigned char data[60];
+        boot_LE32U blocks[15];
+    };
+    boot_LE32U generation;
+    boot_LE32U fileAcl;
+    boot_LE32U dirAcl;
+    boot_LE32U fragAddr;
+    uint8_t    fragNum;
+    uint8_t    fragSize;
+    boot_LE16U modeHigh;
+    boot_LE16U uidHigh;
+    boot_LE16U gidHigh;
+    boot_LE32U author;
+};
+
+BOOT_STRUCT(ext2_GroupDesc) {
+    boot_LE32U blockBitmap;
+    boot_LE32U iNodeBitmap;
+    boot_LE32U iNodeTable;
+    boot_LE16U freeBlocksCount;
+    boot_LE16U freeINodesCount;
+    boot_LE16U dirAllocBlocks;
+    char pad[14];
 };
 
 #ifdef __cplusplus
@@ -168,6 +241,40 @@ NS_CONST(ext2_, Algorithm_BZIP2)
 NS_CONST(ext2_, Algorithm_LZO)
 
 NS_USING(ext2_, Superblock)
+NS_USING(ext2_, GroupDesc)
+NS_USING(ext2_, INode)
+
+NS_USING(ext2_, INodes)
+NS_CONST(ext2_, BadINode)
+NS_CONST(ext2_, RootINode)
+NS_CONST(ext2_, AclIdxINode)
+NS_CONST(ext2_, AclDataINode)
+NS_CONST(ext2_, BootINode)
+NS_CONST(ext2_, UnderDirINode)
+
+NS_USING(ext2_, Mode)
+
+NS_CONST(ext2_, Mode_TypeMask)
+NS_CONST(ext2_, Mode_Sock)
+NS_CONST(ext2_, Mode_SymLink)
+NS_CONST(ext2_, Mode_File)
+NS_CONST(ext2_, Mode_BlkDev)
+NS_CONST(ext2_, Mode_Dir)
+NS_CONST(ext2_, Mode_ChrDev)
+NS_CONST(ext2_, Mode_FIFO)
+
+NS_CONST(ext2_, Mode_UID)
+NS_CONST(ext2_, Mode_GID)
+NS_CONST(ext2_, Mode_Sticky)
+NS_CONST(ext2_, Mode_RUsr)
+NS_CONST(ext2_, Mode_WUsr)
+NS_CONST(ext2_, Mode_XUsr)
+NS_CONST(ext2_, Mode_RGrp)
+NS_CONST(ext2_, Mode_WGrp)
+NS_CONST(ext2_, Mode_XGrp)
+NS_CONST(ext2_, Mode_ROth)
+NS_CONST(ext2_, Mode_WOth)
+NS_CONST(ext2_, Mode_XOth)
 
 #undef NS_CONST
 #undef NS_USING

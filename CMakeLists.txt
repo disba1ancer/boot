@@ -60,8 +60,10 @@ add_executable(boot
     src/btstdbeg.h
     src/btstdend.h
     src/ext2/ext2.h
-    src/ext2/Ext2Driver.h
-    src/ext2/Ext2Driver.cpp
+    src/ext2/File.h
+    src/ext2/File.cpp
+    src/ext2/Driver.h
+    src/ext2/Driver.cpp
     src/i686/Conout_impl.h
     src/i686/Conout_impl.cpp
     src/i686/alloc.c

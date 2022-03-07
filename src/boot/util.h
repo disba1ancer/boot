@@ -138,11 +138,13 @@ NS_FUNC(boot_, DoublyLinkedList_Add)
 NS_FUNC(boot_, DoublyLinkedList_Remove)
 
 template <typename A, typename B>
+requires (requires(A a, B b) { a < b; })
 constexpr auto Min(const A& a, const B& b) -> decltype(a + b) {
     return (a < b) ? a : b;
 }
 
 template <typename A, typename B>
+requires (requires(A a, B b) { a > b; })
 constexpr auto Max(const A& a, const B& b) -> decltype(a + b) {
     return (a > b) ? a : b;
 }
