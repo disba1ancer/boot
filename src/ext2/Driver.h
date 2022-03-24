@@ -18,8 +18,8 @@ public:
 private:
     auto GetBlockSize() const -> size_t;
     void ReinitBuffer(unsigned logBlockSize);
-    int  ReadBlock(unsigned char* buf, uint32_t blockNum);
-    int  ReadBlockSpecial(unsigned char* buf, uint32_t blockNum);
+    int  ReadBlock(void* buf, uint32_t blockNum);
+    int  ReadBlockSpecial(void* buf, uint32_t blockNum);
     static auto Mul2N(uint32_t val, int pwr) -> uint32_t;
     auto GetBlocksCount() const -> uint32_t;
     auto GetRevisionLevel() const -> uint32_t;

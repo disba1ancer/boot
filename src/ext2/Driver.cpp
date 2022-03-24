@@ -15,15 +15,15 @@ Driver::Driver(IBlockDevice* device) :
         std::terminate();
     }
     memcpy(&superblock, buf.Get(), sizeof(superblock));
-    if (boot_LE16ULoad(&superblock.magic) != ext2_SuperblockMagic) {
+    if (ELoad(superblock.magic) != ext2_SuperblockMagic) {
         std::terminate();
     }
-    ReinitBuffer(boot_LE32ULoad(&superblock.logBlockSize));
+    ReinitBuffer(ELoad(superblock.logBlockSize));
 }
 
 size_t Driver::GetBlockSize() const
 {
-    return Mul2N(1024, int(boot_LE32ULoad(&superblock.logBlockSize)));
+    return Mul2N(1024, int(ELoad(superblock.logBlockSize)));
 }
 
 void Driver::ReinitBuffer(unsigned logBlockSize)
@@ -47,7 +47,7 @@ void Driver::ReinitBuffer(unsigned logBlockSize)
     }
 }
 
-int Driver::ReadBlock(unsigned char* buf, uint32_t blockNum)
+int Driver::ReadBlock(void* buf, uint32_t blockNum)
 {
     auto blocksCount = GetBlocksCount();
     if (blockNum > blocksCount && blocksCount != 0) {
@@ -67,7 +67,7 @@ int Driver::ReadBlock(unsigned char* buf, uint32_t blockNum)
     return IBlockDevice::NoError;
 }
 
-int Driver::ReadBlockSpecial(unsigned char* buf, uint32_t blockNum)
+int Driver::ReadBlockSpecial(void* buf, uint32_t blockNum)
 {
     auto startSect = Mul2N(blockNum, logSectorsPerBlock);
     if (startSect != bufStartSect) {
@@ -101,12 +101,12 @@ uint32_t Driver::Mul2N(uint32_t val, int pwr)
 
 uint32_t Driver::GetBlocksCount() const
 {
-    return boot_LE32ULoad(&superblock.blocksCount);
+    return ELoad(superblock.blocksCount);
 }
 
 uint32_t Driver::GetRevisionLevel() const
 {
-    return boot_LE32ULoad(&superblock.revisionLevel);
+    return ELoad(superblock.revisionLevel);
 }
 
 size_t Driver::GetINodeSize() const
@@ -114,14 +114,14 @@ size_t Driver::GetINodeSize() const
     if (GetRevisionLevel() == ext2_GoodOldRev) {
         return ext2_GoodOldINodeSize;
     } else {
-        return boot_LE16ULoad(&superblock.iNodeSize);
+        return ELoad(superblock.iNodeSize);
     }
     return 0;
 }
 
 uint32_t Driver::GetINodesPerGroup() const
 {
-    return boot_LE32ULoad(&superblock.iNodesPerGroup);
+    return ELoad(superblock.iNodesPerGroup);
 }
 
 File Driver::OpenINode(uint32_t iNode)
@@ -131,9 +131,9 @@ File Driver::OpenINode(uint32_t iNode)
 
 int Driver::LoadGroupDesc(::ext2::GroupDesc* desc, uint32_t grpNum)
 {
-    auto logGroupDescPerBlock = int(boot_LE32ULoad(&superblock.logBlockSize)) + 5;
+    auto logGroupDescPerBlock = int(ELoad(superblock.logBlockSize)) + 5;
     auto blk = grpNum >> logGroupDescPerBlock;
-    int result = ReadBlock(buf.Get(), boot_LE32ULoad(&superblock.firstDataBlock) + 1 + blk);
+    int result = ReadBlock(buf.Get(), ELoad(superblock.firstDataBlock) + 1 + blk);
     if (result != IBlockDevice::NoError) {
         return result;
     }
@@ -151,11 +151,11 @@ int Driver::LoadINode(::ext2::INode* desc, uint32_t iNodeNum)
     if (result != IBlockDevice::NoError) {
         return result;
     }
-    auto logINodesPerBlock = int(boot_LE32ULoad(&superblock.logBlockSize))
+    auto logINodesPerBlock = int(ELoad(superblock.logBlockSize))
         + 10 - boot_Log2U32(GetINodeSize());
     auto iNodeBlock = iNodeInGroup >> logINodesPerBlock;
     auto iNodeOffset = (iNodeInGroup - (iNodeBlock << logINodesPerBlock)) * GetINodeSize();
-    iNodeBlock += boot_LE32ULoad(&group.iNodeTable);
+    iNodeBlock += ELoad(group.iNodeTable);
     result = ReadBlock(buf.Get(), iNodeBlock);
     if (result != IBlockDevice::NoError) {
         return result;

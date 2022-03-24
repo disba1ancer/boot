@@ -17,7 +17,7 @@ public:
 
     virtual auto GetBlockSize() const -> size_t = 0;
     virtual auto GetBlockCount() const -> uint64_t = 0;
-    virtual auto Read(unsigned char* buf, uint64_t blkNum, size_t blkCnt) -> BlockDeviceError = 0;
+    virtual auto Read(void* buf, uint64_t blkNum, size_t blkCnt) -> BlockDeviceError = 0;
 };
 
 } // namespace boot

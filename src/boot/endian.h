@@ -240,6 +240,31 @@ inline int64_t boot_BE64SLoad(const boot_BE64S* val)
 
 #ifdef __cplusplus
 } //extern "C"
+
+namespace boot {
+
+#define GENERATE(bit)\
+inline uint##bit##_t ELoad(const boot_LE##bit##U& val) {\
+    return boot_LE##bit##ULoad(&val);\
+}\
+inline int##bit##_t ELoad(const boot_LE##bit##S& val) {\
+    return boot_LE##bit##SLoad(&val);\
+}\
+inline uint##bit##_t ELoad(const boot_BE##bit##U& val) {\
+    return boot_BE##bit##ULoad(&val);\
+}\
+inline int##bit##_t ELoad(const boot_BE##bit##S& val) {\
+    return boot_BE##bit##SLoad(&val);\
+}
+
+GENERATE(16)
+GENERATE(32)
+GENERATE(64)
+
+#undef GENERATE
+
+} // namespace boot
+
 #endif
 
 #endif // ENDIAN_H
