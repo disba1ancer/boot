@@ -86,7 +86,7 @@ void Conout_impl::PutC(char c)
 void Conout_impl::Write(const char* buf, std::size_t size)
 {
     for (std::size_t i = 0; i < size; ++i) {
-        PutC_intern(buf[size]);
+        PutC_intern(buf[i]);
     }
     Render();
 }

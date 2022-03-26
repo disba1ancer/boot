@@ -17,6 +17,7 @@ public:
     File OpenINode(uint32_t iNode);
 private:
     auto GetBlockSize() const -> size_t;
+    int  LogBlockSize() const;
     void ReinitBuffer(unsigned logBlockSize);
     int  ReadBlock(void* buf, uint32_t blockNum);
     int  ReadBlockSpecial(void* buf, uint32_t blockNum);

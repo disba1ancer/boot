@@ -71,6 +71,8 @@ extern "C" void boot_main(boot_StartupInfo *si [[maybe_unused]], size_t count, M
     } whileEnd:
     i686::PartitionDevice part(si->diskNum, &si->part);
     boot::ext2::Driver ext2drv(&part);
-    auto file = ext2drv.OpenINode(16);
-    auto blk = file.MapBlock(112);
+    auto file = ext2drv.OpenINode(2);
+    file.Read(buf, 1, 17);
+    out.Write(buf, 17);
+    out.PutC('\n');
 }

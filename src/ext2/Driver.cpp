@@ -23,7 +23,12 @@ Driver::Driver(IBlockDevice* device) :
 
 size_t Driver::GetBlockSize() const
 {
-    return Mul2N(1024, int(ELoad(superblock.logBlockSize)));
+    return Mul2N(1, LogBlockSize());
+}
+
+int Driver::LogBlockSize() const
+{
+    return int(ELoad(superblock.logBlockSize)) + 10;
 }
 
 void Driver::ReinitBuffer(unsigned logBlockSize)
@@ -144,6 +149,9 @@ int Driver::LoadGroupDesc(::ext2::GroupDesc* desc, uint32_t grpNum)
 
 int Driver::LoadINode(::ext2::INode* desc, uint32_t iNodeNum)
 {
+    if (iNodeNum == 0 || iNodeNum > ELoad(superblock.iNodesCount)) {
+        return IBlockDevice::AccessOutOfRange;
+    }
     auto iNodeGroup = (iNodeNum - 1) / GetINodesPerGroup();
     auto iNodeInGroup = (iNodeNum - 1) % GetINodesPerGroup();
     ::ext2::GroupDesc group;
