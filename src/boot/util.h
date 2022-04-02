@@ -4,6 +4,7 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
 
 #define BOOT_STRUCT(name) \
     typedef struct name name; \
@@ -21,9 +22,6 @@ BOOT_STRUCT(boot_DoublyLinkedListElement) {
 BOOT_STRUCT(boot_DoublyLinkedList) {
     boot_DoublyLinkedListElement *begin;
 };
-
-//void DoublyLinkedList_Add(DoublyLinkedList *list, DoublyLinkedListElement *elem);
-//void DoublyLinkedList_Remove(DoublyLinkedList *list, DoublyLinkedListElement *elem);
 
 #ifdef __cplusplus
 extern "C" {
@@ -127,6 +125,17 @@ TMINMAX(64)
 
 #undef TMINMAX
 
+size_t boot_ULLToStr(char* str, size_t size, unsigned long long num, int radix);
+size_t boot_ULToStr(char* str, size_t size, unsigned long num, int radix);
+size_t boot_UToStr(char* str, size_t size, unsigned num, int radix);
+
+#ifndef __cplusplus
+#define boot_UToStr(str, size, num, radix) _Generic(num,\
+    unsigned long long : boot_ULLToStr(str, size, num, radix),\
+    unsigned long long : boot_ULToStr(str, size, num, radix),\
+    unsigned long long : boot_UToStr(str, size, num, radix))
+#endif
+
 #ifdef __cplusplus
 } // extern "C"
 
@@ -161,6 +170,21 @@ TMINMAX(32)
 TMINMAX(64)
 
 #undef TMINMAX
+
+NS_FUNC(boot_, ULLToStr)
+NS_FUNC(boot_, ULToStr)
+
+inline size_t UToStr(char* str, size_t size, unsigned num, int radix) {
+    return boot_UToStr(str, size, num, radix);
+}
+
+inline size_t UToStr(char* str, size_t size, unsigned long num, int radix) {
+    return boot_ULToStr(str, size, num, radix);
+}
+
+inline size_t UToStr(char* str, size_t size, unsigned long long num, int radix) {
+    return boot_ULLToStr(str, size, num, radix);
+}
 
 #undef NS_FUNC
 

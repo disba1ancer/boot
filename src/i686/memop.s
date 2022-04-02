@@ -11,9 +11,8 @@ memset:
         size    = ecx
 
         movzx   eax, byte ptr val[esp]
-        mov     ecx, 0x1010101
-        mul     ecx
         mov     edx, edi
+        imul    eax, 0x1010101
 
         mov     size, count[esp]
         mov     cur, dest[esp]
@@ -54,84 +53,215 @@ memset:
 .global memcpy
 .type memcpy, @function
 memcpy:
-        dest    = 4
-        src     = 8
-        size    = 12
-        mov     ecx, size[esp]
-        mov     eax, esi
+        dest    = 12
+        src     = 16
+        size    = 20
+        push    esi
+        mov     ecx, size - 4[esp]
+        push    edi
         test    ecx, ecx
-        mov     edx, edi
-        jz      9f
+        jz      8f
 
         mov     esi, src[esp]
+        mov     eax, esi
         mov     edi, dest[esp]
-        sub     esi, edi
+        sub     eax, edi
+.lmvdir:mov     edx, esi
 
-        test    esi, 3
-        jz      .Lmemcpy4
+        cmp     ecx, 16
+        jc      .Lmemcpy1
 
-        test    esi, 1
-        jz      .Lmemcpy2
+        and     eax, 3
+        jmp     .Lmemcpy_tbl[eax * 4]
+
+.Lmemcpy_End3:
+        movs    [edi], byte ptr [esi]
+.Lmemcpy_End2:
+        movs    [edi], byte ptr [esi]
+.Lmemcpy_End1:
+        movs    [edi], byte ptr [esi]
+        jmp     8f
 
 .Lmemcpy1:
-        mov     esi, src[esp]
-
         rep movs [edi], byte ptr [esi]
-        jmp     8f
 
-.Lmemcpy2:
-        mov     esi, src[esp]
-
-        test    edi, 1
-        jz      0f
-        movs    [edi], byte ptr [esi]
-        lea     ecx, [ecx - 1]
-
-0:      mov     size[esp], ecx
-        shr     ecx, 1
-        rep movs [edi], word ptr [esi]
-        mov     ecx, size[esp]
-
-        test    ecx, 1
-        jz      8f
-        movs    [edi], byte ptr [esi]
-        jmp     8f
-
-.Lmemcpy4:
-        mov     esi, src[esp]
-
-        test    edi, 1
-        jz      0f
-        lea     ecx, [ecx - 1]
-        movs    [edi], byte ptr [esi]
-
-0:      cmp     ecx, 2
-        jb      1f
-
-        test    edi, 2
-        jz      0f
-        lea     ecx, [ecx - 2]
-        movs    [edi], word ptr [esi]
-
-0:      mov     size[esp], ecx
-        shr     ecx, 2
-        rep movs [edi], dword ptr [esi]
-        mov     ecx, size[esp]
-
-        test    ecx, 2
-        jz      1f
-        movs    [edi], word ptr [esi]
-1:      test    ecx, 1
-        jz      8f
-        movs    [edi], byte ptr [esi]
-
-8:      mov     edi, edx
-        mov     esi, eax
-9:      mov     eax, dest[esp]
+8:      mov     eax, dest[esp]
+        pop     edi
+        pop     esi
         ret
 
+.Lmemcpy2:
+        test    edi, 1
+        jz      0f
+        movs    [edi], byte ptr [esi]
+        lea     ecx, [ecx - 1]
 
-.globl  strcmp
+0:      mov     eax, ecx
+        shr     ecx, 1
+        rep movs [edi], word ptr [esi]
+
+        and     eax, 1
+        jmp     .Lmemcpy_EndTbl[eax * 4]
+
+.Lmemcpy4:
+        and     edx, 3
+        jmp     .Lmemcpy4_StartTbl[edx * 4]
+
+.Lmemcpy4_Start3:
+        movs    [edi], byte ptr [esi]
+.Lmemcpy4_Start2:
+        movs    [edi], byte ptr [esi]
+.Lmemcpy4_Start1:
+        movs    [edi], byte ptr [esi]
+        xor     edx, 3
+        lea     ecx, [ecx - 1]
+        sub     ecx, edx
+
+0:      mov     eax, ecx
+        shr     ecx, 2
+        rep movs [edi], dword ptr [esi]
+
+        and     eax, 3
+        jmp     .Lmemcpy_EndTbl[eax * 4]
+
+.section .rodata
+.align 4
+.Lmemcpy_tbl:
+        .4byte  .Lmemcpy4
+        .4byte  .Lmemcpy1
+        .4byte  .Lmemcpy2
+        .4byte  .Lmemcpy1
+
+.Lmemcpy4_StartTbl:
+        .4byte  0b
+        .4byte  .Lmemcpy4_Start3
+        .4byte  .Lmemcpy4_Start2
+        .4byte  .Lmemcpy4_Start1
+
+.Lmemcpy_EndTbl:
+        .4byte  8b
+        .4byte  .Lmemcpy_End1
+        .4byte  .Lmemcpy_End2
+        .4byte  .Lmemcpy_End3
+.text
+
+.global memmove
+.type memmove, @function
+memmove:
+        dest    = 12
+        src     = 16
+        size    = 20
+        push    esi
+        mov     ecx, size - 4[esp]
+        push    edi
+        test    ecx, ecx
+        jz      8f
+
+        mov     esi, src[esp]
+        mov     eax, esi
+        mov     edi, dest[esp]
+        sub     eax, edi
+        jz      8f
+        jnc     .lmvdir
+        std
+        lea     esi, [esi + ecx]
+        add     edi, ecx
+        mov     edx, esi
+
+        cmp     ecx, 16
+        jc      .Lmemmove1
+
+        and     eax, 3
+        jmp     .Lmemmove_Tbl[eax * 4]
+
+.Lmemmove_End3:
+        movs    [edi], byte ptr [esi]
+.Lmemmove_End2:
+        movs    [edi], byte ptr [esi]
+.Lmemmove_End1:
+        movs    [edi], byte ptr [esi]
+        jmp     8f
+
+.Lmemmove1:
+        sub     edi, 1
+        lea     esi, [esi - 1]
+        rep movs [edi], byte ptr [esi]
+
+8:      cld
+        mov     eax, dest[esp]
+        pop     edi
+        pop     esi
+        ret
+
+.Lmemmove2:
+        dec     edi
+        lea     esi, [esi - 1]
+        test    edx, 1
+        jz      0f
+
+        lea     ecx, [ecx - 1]
+        movs    [edi], byte ptr [esi]
+
+0:      lea     esi, [esi - 1]
+        dec     edi
+        mov     eax, ecx
+        shr     ecx, 1
+        rep movs [edi], word ptr [esi]
+        inc     edi
+        lea     esi, [esi + 1]
+
+        and     eax, 1
+        jmp     .Lmemmove_EndTbl[eax * 4]
+
+.Lmemmove4:
+        sub     edi, 1
+        lea     esi, [esi - 1]
+
+        and     edx, 3
+        jmp     .Lmemmove4_StartTbl[edx * 4]
+
+.Lmemmove4_Start3:
+        movs    [edi], byte ptr [esi]
+.Lmemmove4_Start2:
+        movs    [edi], byte ptr [esi]
+.Lmemmove4_Start1:
+        movs    [edi], byte ptr [esi]
+        sub     ecx, edx
+
+.Lmemmove4_Start0:
+        lea     esi, [esi - 3]
+        sub     edi, 3
+        mov     eax, ecx
+        shr     ecx, 2
+        rep movs [edi], dword ptr [esi]
+        add     edi, 3
+        lea     esi, [esi + 3]
+
+        and     eax, 3
+        jmp     .Lmemmove_EndTbl[eax * 4]
+
+.section .rodata
+.align 4
+.Lmemmove_Tbl:
+        .4byte  .Lmemmove4
+        .4byte  .Lmemmove1
+        .4byte  .Lmemmove2
+        .4byte  .Lmemmove1
+
+.Lmemmove_EndTbl:
+        .4byte  8b
+        .4byte  .Lmemmove_End1
+        .4byte  .Lmemmove_End2
+        .4byte  .Lmemmove_End3
+
+.Lmemmove4_StartTbl:
+        .4byte  .Lmemmove4_Start0
+        .4byte  .Lmemmove4_Start1
+        .4byte  .Lmemmove4_Start2
+        .4byte  .Lmemmove4_Start3
+.text
+
+.globl strcmp
 .type strcmp, @function
 strcmp:
 #        push    ebp
