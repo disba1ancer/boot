@@ -54,6 +54,8 @@ static void PutZero(char* str, size_t size, size_t* off)
     PutForward(str, size, '0', off);
 }
 
+#undef boot_UToStr
+
 #define GENERATE(p, t) \
 static void p##ToStr8(char* str, size_t size, t num, size_t* off) {\
     while (num) {\
@@ -81,15 +83,8 @@ static void p##ToStrGen(char* str, size_t size, t num, int radix, size_t* off) {
         PutNumForward(str, size, (int)(num % (unsigned)radix), off);\
         num = num / (unsigned)radix;\
     }\
-}
-
-GENERATE(ULL, unsigned long long)
-GENERATE(UL, unsigned long)
-GENERATE(U, unsigned)
-#undef GENERATE
-
-#undef boot_UToStr
-#define GENERATE(p, t) \
+}\
+\
 size_t boot_##p##ToStr(char* str, size_t size, t num, int radix) {\
     size_t result = 0;\
     PutForward(str, size, 0, &result);\

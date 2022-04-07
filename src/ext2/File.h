@@ -21,6 +21,7 @@ public:
     auto GetGID() const -> uint32_t;
     bool IsDirectory() const;
     int  Read(void* buf, uint64_t start, size_t length);
+    auto GetDriver() const -> Driver&;
 private:
     auto MapBlock(uint32_t blockNum) -> uint32_t;
     int  ReadBlock(void* buf, uint32_t blockNum);

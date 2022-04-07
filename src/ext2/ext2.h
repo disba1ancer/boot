@@ -91,6 +91,17 @@ enum ext2_Mode {
     ext2_Mode_XOth =   01,
 };
 
+enum ext2_FileType {
+    ext2_FileType_Unknown,
+    ext2_FileType_File,
+    ext2_FileType_Directory,
+    ext2_FileType_CharDevice,
+    ext2_FileType_BlockDevice,
+    ext2_FileType_FIFO,
+    ext2_FileType_Socket,
+    ext2_FileType_SymLink,
+};
+
 BOOT_STRUCT(ext2_Superblock) {
     boot_LE32U iNodesCount;
     boot_LE32U blocksCount;
@@ -180,6 +191,13 @@ BOOT_STRUCT(ext2_GroupDesc) {
     char pad[14];
 };
 
+BOOT_STRUCT(ext2_Directory) {
+    boot_LE32U iNode;
+    boot_LE16U length;
+    uint8_t nameLen;
+    uint8_t type;
+};
+
 #ifdef __cplusplus
 
 namespace ext2 {
@@ -240,10 +258,6 @@ NS_CONST(ext2_, Algorithm_GZIP)
 NS_CONST(ext2_, Algorithm_BZIP2)
 NS_CONST(ext2_, Algorithm_LZO)
 
-NS_USING(ext2_, Superblock)
-NS_USING(ext2_, GroupDesc)
-NS_USING(ext2_, INode)
-
 NS_USING(ext2_, INodes)
 NS_CONST(ext2_, BadINode)
 NS_CONST(ext2_, RootINode)
@@ -275,6 +289,21 @@ NS_CONST(ext2_, Mode_XGrp)
 NS_CONST(ext2_, Mode_ROth)
 NS_CONST(ext2_, Mode_WOth)
 NS_CONST(ext2_, Mode_XOth)
+
+NS_USING(ext2_, FileType)
+NS_CONST(ext2_, FileType_Unknown)
+NS_CONST(ext2_, FileType_File)
+NS_CONST(ext2_, FileType_Directory)
+NS_CONST(ext2_, FileType_CharDevice)
+NS_CONST(ext2_, FileType_BlockDevice)
+NS_CONST(ext2_, FileType_FIFO)
+NS_CONST(ext2_, FileType_Socket)
+NS_CONST(ext2_, FileType_SymLink)
+
+NS_USING(ext2_, Superblock)
+NS_USING(ext2_, GroupDesc)
+NS_USING(ext2_, INode)
+NS_USING(ext2_, Directory)
 
 #undef NS_CONST
 #undef NS_USING

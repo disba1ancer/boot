@@ -57,13 +57,16 @@ add_executable(boot
     src/boot/UniquePtr.hpp
     src/boot/util.c
     src/boot/util.h
+    src/boot/util.hpp
     src/btstdbeg.h
     src/btstdend.h
     src/ext2/ext2.h
-    src/ext2/File.h
-    src/ext2/File.cpp
+    src/ext2/Directory.h
+    src/ext2/Directory.cpp
     src/ext2/Driver.h
     src/ext2/Driver.cpp
+    src/ext2/File.h
+    src/ext2/File.cpp
     src/i686/Conout_impl.h
     src/i686/Conout_impl.cpp
     src/i686/alloc.c

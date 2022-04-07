@@ -99,6 +99,11 @@ int File::Read(void* buf, uint64_t start, size_t length)
     return IBlockDevice::NoError;
 }
 
+Driver& File::GetDriver() const
+{
+    return *driver;
+}
+
 int File::ReadBlock(void* buf, uint32_t blockNum)
 {
     if (blockNum >= (ELoad(iNode.sectors) >> (driver->LogBlockSize() - 9))) {

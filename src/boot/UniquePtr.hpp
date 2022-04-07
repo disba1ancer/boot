@@ -79,19 +79,19 @@ public:
         ptr = nullptr;
         return r;
     }
-    auto Get() -> Pointer
+    auto Get() const -> Pointer
     {
         return ptr;
     }
-    operator bool()
+    operator bool() const
     {
         return ptr != nullptr;
     }
-    auto operator*() -> ElementType&
+    auto operator*() const -> ElementType&
     {
         return *Get();
     }
-    auto operator->() -> Pointer
+    auto operator->() const -> Pointer
     {
         return Get();
     }
@@ -117,7 +117,7 @@ class UniquePtr<T[], D> : public detail::UniquePtr_Base<T[], D> {
 public:
     UniquePtr() : Base(nullptr) {}
     UniquePtr(Pointer ptr) : Base(ptr) {}
-    T &operator[](std::size_t index)
+    T &operator[](std::size_t index) const
     {
         return this->Get()[index];
     }
