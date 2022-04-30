@@ -1,16 +1,16 @@
-#include "i686/processor.h"
-#include "i686/bios_video.h"
-#include "i686/membios.h"
-#include "i686/init.h"
-#include "i686/bios_disk.h"
+#include "platform/i686/processor.h"
+#include "platform/i686/bios_video.h"
+#include "platform/i686/membios.h"
+#include "platform/i686/init.h"
+#include "platform/i686/bios_disk.h"
 #include "boot/gpt.h"
 #include <stddef.h>
 #include <stdlib.h>
 #include <stdlib.h>
 #include <string.h>
 #include "boot/Conout.hpp"
-#include "i686/bios_kbrd.h"
-#include "i686/PartitionDevice.h"
+#include "platform/i686/bios_kbrd.h"
+#include "platform/i686/PartitionDevice.h"
 #include "ext2/Driver.h"
 #include "ext2/File.h"
 #include "ext2/Directory.h"
@@ -46,6 +46,9 @@ extern "C" void boot_main(boot_StartupInfo *si [[maybe_unused]], size_t count, M
     boot::ext2::Directory dir(ext2drv.OpenINode(2));
     for (auto&& entry : dir) {
         out.PutStr(entry.Name());
+        if (strcmp(entry.Name(), "test") == 0) {
+            out.PutStr("/cmp");
+        }
         out.PutC('\n');
     }
     while (true) {

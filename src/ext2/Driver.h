@@ -15,6 +15,7 @@ public:
     friend class File;
     Driver(IBlockDevice* device);
     File OpenINode(uint32_t iNode);
+    File OpenINodeByPath(const char* name);
 private:
     auto GetBlockSize() const -> size_t;
     int  LogBlockSize() const;

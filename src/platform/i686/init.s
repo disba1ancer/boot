@@ -37,8 +37,8 @@ data32  push    offset start32
 .code16
 
 _end:   int     0x18
-#        hlt
-#        jmp     _end
+0:      hlt
+        jmp     0b
 
 .text
 .code32

@@ -1,4 +1,5 @@
 #include "Conout_impl.h"
+#include <boot/Conout_preimpl.hpp>
 #include "vgacon.h"
 #include <stdlib.h>
 #include <new>

@@ -1,5 +1,4 @@
-#include "Conout.hpp"
-#include "i686/Conout_impl.h"
+#include "boot/Conout.hpp"
 #include <stdlib.h>
 #include <type_traits>
 #include <new>

@@ -1,4 +1,4 @@
-#include "endian.h"
+#include "boot/endian.h"
 
 extern inline uint16_t boot_LE16ULoad(const boot_LE16U* val);
 extern inline uint32_t boot_LE32ULoad(const boot_LE32U* val);
