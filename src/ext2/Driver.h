@@ -1,7 +1,7 @@
 #ifndef BOOT_EXT2_DRIVER_H
 #define BOOT_EXT2_DRIVER_H
 
-#include "boot/IBlockDevice.h"
+#include "boot/ioInterface.h"
 #include "ext2.h"
 #include "boot/UniquePtr.hpp"
 
@@ -14,8 +14,8 @@ class Driver
 public:
     friend class File;
     Driver(IBlockDevice* device);
-    File OpenINode(uint32_t iNode);
-    File OpenINodeByPath(const char* name);
+    File OpenByINode(uint32_t iNode);
+    File OpenByPath(const char* name);
 private:
     auto GetBlockSize() const -> size_t;
     int  LogBlockSize() const;

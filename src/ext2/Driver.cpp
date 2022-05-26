@@ -2,7 +2,10 @@
 #include "File.h"
 #include <exception>
 #include "boot/util.h"
+#include "boot/util.hpp"
 #include "string.h"
+#include "boot/Conout.hpp"
+#include "Directory.h"
 
 namespace boot::ext2 {
 
@@ -11,7 +14,7 @@ Driver::Driver(IBlockDevice* device) :
     superblock({})
 {
     ReinitBuffer(0);
-    if (ReadBlock(buf.Get(), 1) != IBlockDevice::NoError) {
+    if (ReadBlock(buf.Get(), 1) != int(IOStatus::NoError)) {
         std::terminate();
     }
     memcpy(&superblock, buf.Get(), sizeof(superblock));
@@ -56,7 +59,7 @@ int Driver::ReadBlock(void* buf, uint32_t blockNum)
 {
     auto blocksCount = GetBlocksCount();
     if (blockNum > blocksCount && blocksCount != 0) {
-        return IBlockDevice::AccessOutOfRange;
+        return int(IOStatus::AccessOutOfRange);
     }
     if (logSectorsPerBlock < 0) {
         return ReadBlockSpecial(buf, blockNum);
@@ -66,10 +69,10 @@ int Driver::ReadBlock(void* buf, uint32_t blockNum)
         Mul2N(blockNum, logSectorsPerBlock),
         Mul2N(1, Max(0, logSectorsPerBlock))
     );
-    if (result != IBlockDevice::NoError) {
-        return result;
+    if (result != IOStatus::NoError) {
+        return int(result);
     }
-    return IBlockDevice::NoError;
+    return int(IOStatus::NoError);
 }
 
 int Driver::ReadBlockSpecial(void* buf, uint32_t blockNum)
@@ -81,9 +84,9 @@ int Driver::ReadBlockSpecial(void* buf, uint32_t blockNum)
             startSect,
             Mul2N(1, Max(0, logSectorsPerBlock))
         );
-        if (result != IBlockDevice::NoError) {
+        if (result != IOStatus::NoError) {
             bufStartSect = InvalidSector;
-            return result;
+            return int(result);
         }
         bufStartSect = startSect;
     }
@@ -92,7 +95,7 @@ int Driver::ReadBlockSpecial(void* buf, uint32_t blockNum)
         this->buf.Get() + (blockNum & blkMask) * GetBlockSize(),
         GetBlockSize()
     );
-    return IBlockDevice::NoError;
+    return int(IOStatus::NoError);
 }
 
 uint32_t Driver::Mul2N(uint32_t val, int pwr)
@@ -129,9 +132,65 @@ uint32_t Driver::GetINodesPerGroup() const
     return ELoad(superblock.iNodesPerGroup);
 }
 
-File Driver::OpenINode(uint32_t iNode)
+File Driver::OpenByINode(uint32_t iNode)
 {
     return { this, iNode };
+}
+
+namespace {
+
+struct PathToken {
+    PathToken(const char* name) :
+        tokBegin(name)
+    {
+        for (; *tokBegin == '/'; ++tokBegin) {}
+        tokEnd = strchr(tokBegin, '/');
+        if (tokEnd == nullptr) tokEnd = tokBegin + strlen(tokBegin);
+    }
+    const char* Get() const {
+        return tokBegin;
+    }
+    size_t Size() const {
+        return size_t(tokEnd - tokBegin);
+    }
+    bool IsEnd() const {
+        return tokBegin == tokEnd;
+    }
+    void Next() {
+        tokBegin = tokEnd;
+        for (; *tokBegin == '/'; ++tokBegin) {}
+        tokEnd = strchr(tokBegin, '/');
+        if (tokEnd == nullptr) tokEnd = tokBegin + strlen(tokBegin);
+    }
+private:
+    const char *tokBegin;
+    const char *tokEnd;
+};
+
+}
+
+File Driver::OpenByPath(const char* name)
+{
+    File nextFile = OpenByINode(::ext2::RootINode);
+    for (PathToken tok = {name}; !tok.IsEnd(); tok.Next()) {
+        Directory curDir(boot::Move(nextFile));
+        auto strSize = tok.Size();
+        for (auto&& entry : curDir) {
+            if (strSize != entry.NameLen()) {
+                continue;
+            }
+            if (memcmp(entry.Name(), tok.Get(), strSize) == 0) {
+                nextFile = entry.Open();
+                if ( tok.Get()[strSize] == 0 ) {
+                    return nextFile;
+                }
+                goto cont;
+            }
+        }
+        std::terminate();
+        cont:;
+    }
+    std::terminate();
 }
 
 int Driver::LoadGroupDesc(::ext2::GroupDesc* desc, uint32_t grpNum)
@@ -139,24 +198,24 @@ int Driver::LoadGroupDesc(::ext2::GroupDesc* desc, uint32_t grpNum)
     auto logGroupDescPerBlock = int(ELoad(superblock.logBlockSize)) + 5;
     auto blk = grpNum >> logGroupDescPerBlock;
     int result = ReadBlock(buf.Get(), ELoad(superblock.firstDataBlock) + 1 + blk);
-    if (result != IBlockDevice::NoError) {
+    if (result != int(IOStatus::NoError)) {
         return result;
     }
     auto grpOffset = (grpNum - (blk << logGroupDescPerBlock)) << 5;
     memcpy(desc, buf.Get() + grpOffset, sizeof(::ext2::GroupDesc));
-    return IBlockDevice::NoError;
+    return int(IOStatus::NoError);
 }
 
 int Driver::LoadINode(::ext2::INode* desc, uint32_t iNodeNum)
 {
     if (iNodeNum == 0 || iNodeNum > ELoad(superblock.iNodesCount)) {
-        return IBlockDevice::AccessOutOfRange;
+        return int(IOStatus::AccessOutOfRange);
     }
     auto iNodeGroup = (iNodeNum - 1) / GetINodesPerGroup();
     auto iNodeInGroup = (iNodeNum - 1) % GetINodesPerGroup();
     ::ext2::GroupDesc group;
     auto result = LoadGroupDesc(&group, iNodeGroup);
-    if (result != IBlockDevice::NoError) {
+    if (result != int(IOStatus::NoError)) {
         return result;
     }
     auto logINodesPerBlock = int(ELoad(superblock.logBlockSize))
@@ -165,11 +224,11 @@ int Driver::LoadINode(::ext2::INode* desc, uint32_t iNodeNum)
     auto iNodeOffset = (iNodeInGroup - (iNodeBlock << logINodesPerBlock)) * GetINodeSize();
     iNodeBlock += ELoad(group.iNodeTable);
     result = ReadBlock(buf.Get(), iNodeBlock);
-    if (result != IBlockDevice::NoError) {
+    if (result != int(IOStatus::NoError)) {
         return result;
     }
     memcpy(desc, buf.Get() + iNodeOffset, boot::Min(sizeof(::ext2::INode), GetINodeSize()));
-    return IBlockDevice::NoError;
+    return int(IOStatus::NoError);
 }
 
 } // namespace boot::ext2

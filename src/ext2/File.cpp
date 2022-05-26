@@ -22,16 +22,16 @@ File::File(Driver* driver, uint32_t iNodeNum) :
     for (size_t i = 0; i < cacheLevel; ++i) {
         indexCache[i].Reset(new boot_LE32U[size_t(1) << logBlocksPer]);
     }
-    if (driver->LoadINode(&iNode, iNodeNum) != IBlockDevice::NoError) {
+    if (driver->LoadINode(&iNode, iNodeNum) != int(IOStatus::NoError)) {
         std::terminate();
     }
     if (GetSize() > (uint64_t(12 + blockCountPer1 + blockCountPer2) << driver->LogBlockSize())) {
         auto result = driver->ReadBlock(indexCache[2].Get(), ELoad(iNode.blocks[14]));
-        if (result != IBlockDevice::NoError) {
+        if (result != int(IOStatus::NoError)) {
             std::terminate();
         }
     }
-    if (ReadBlock(dataCache.Get(), lastDataBlock) != IBlockDevice::NoError) {
+    if (ReadBlock(dataCache.Get(), lastDataBlock) != int(IOStatus::NoError)) {
         std::terminate();
     }
 }
@@ -62,41 +62,69 @@ bool File::IsDirectory() const
     return (GetMode() & ::ext2::Mode_TypeMask) == ::ext2::Mode_Dir;
 }
 
-int File::Read(void* buf, uint64_t start, size_t length)
+IOStatus File::Read(void* buf, size_t length, size_t* readCnt, uint64_t start)
 {
-    if (start + length < start || start + length > GetSize()) {
-        return IBlockDevice::AccessOutOfRange;
+    if (start >= GetSize()) {
+        return IOStatus::AccessOutOfRange;
     }
     auto logBlockSize = driver->LogBlockSize();
     auto blockSize = driver->GetBlockSize();
     auto blockMask = blockSize - 1;
     auto bufferOffset = size_t(start & blockMask);
     auto currentBlock = uint32_t(start >> logBlockSize);
+    auto cbuf = (unsigned char*)buf;
+    size_t offset = 0;
+    length = size_t(boot::Min(GetSize() - start, length));
 
-    while (length > 0) {
-        auto min = boot::Min(length, blockSize - bufferOffset);
-        if (bufferOffset == 0 && length >= blockSize) {
-            auto result = ReadBlock(buf, currentBlock);
-            if (result != IBlockDevice::NoError) {
-                return result;
-            }
-        } else {
-            if (lastDataBlock != currentBlock) {
-                auto result = ReadBlock(dataCache.Get(), currentBlock);
-                if (result != IBlockDevice::NoError) {
-                    lastDataBlock = 0;
-                    return result;
+    if (bufferOffset != 0) {
+        auto readSize = boot::Min(length, blockSize - bufferOffset);
+        if (lastDataBlock != currentBlock) {
+            auto result = ReadBlock(dataCache.Get(), currentBlock);
+            if (result != int(IOStatus::NoError)) {
+                lastDataBlock = 0;
+                if (readCnt) {
+                    *readCnt = offset;
                 }
-                lastDataBlock = currentBlock;
+                return IOStatus(result);
             }
-            memcpy(buf, dataCache.Get() + bufferOffset, min);
-            bufferOffset = 0;
+            lastDataBlock = currentBlock;
+        }
+        memcpy(cbuf + offset, dataCache.Get() + bufferOffset, readSize);
+        ++currentBlock;
+        offset += readSize;
+    }
+
+    while (length - offset > blockSize) {
+        auto result = ReadBlock(cbuf + offset, currentBlock);
+        if (result != int(IOStatus::NoError)) {
+            if (readCnt) {
+                *readCnt = offset;
+            }
+            return IOStatus(result);
         }
         ++currentBlock;
-        length -= min;
-        buf = (unsigned char*)buf + min;
+        offset += blockSize;
     }
-    return IBlockDevice::NoError;
+
+    if (length - offset > 0) {
+        auto readSize = length - offset;
+        lastDataBlock = currentBlock;
+        auto result = ReadBlock(dataCache.Get(), currentBlock);
+        if (result != int(IOStatus::NoError)) {
+            lastDataBlock = 0;
+            if (readCnt) {
+                *readCnt = offset;
+            }
+            return IOStatus(result);
+        }
+        memcpy(cbuf + offset, dataCache.Get() + bufferOffset, readSize);
+        offset += readSize;
+    }
+
+    if (readCnt) {
+        *readCnt = offset;
+    }
+    return IOStatus::NoError;
 }
 
 Driver& File::GetDriver() const
@@ -107,7 +135,7 @@ Driver& File::GetDriver() const
 int File::ReadBlock(void* buf, uint32_t blockNum)
 {
     if (blockNum >= (ELoad(iNode.sectors) >> (driver->LogBlockSize() - 9))) {
-        return IBlockDevice::AccessOutOfRange;
+        return int(IOStatus::AccessOutOfRange);
     }
     return driver->ReadBlock(buf, MapBlock(blockNum));
 }

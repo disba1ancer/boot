@@ -22,6 +22,7 @@ class DirectoryEntry {
 public:
     File Open() const;
     auto Name() const -> const char*;
+    auto NameLen() const -> size_t;
     auto Type() const -> ::ext2::FileType;
 private:
     Driver* driver;

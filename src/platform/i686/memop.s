@@ -265,8 +265,8 @@ memmove:
 .type strcmp, @function
 strcmp:
         stacksize = 12
-        left    = 0 + stacksize + 4
-        right   = 4 + stacksize + 4
+        left    = stacksize + 4 * 1
+        right   = stacksize + 4 * 2
         sub     esp, stacksize
         mov     [esp], ebx
         mov     [esp + 4], esi
@@ -306,36 +306,32 @@ strcmp:
 .Lstrcmp2:
 0:      movzx   eax, word ptr[esi]
         movzx   edx, word ptr[edi]
+        mov     ecx, 0xfefefeff
+        mov     ebx, 0xffffffff
         add     esi, 2
+        add     ecx, edx
         add     edi, 2
-        mov     ecx, edx
-        mov     ebx, edx
-        and     ebx, 0xFFFF7F7F
-        or      ecx, 0xFFFF7F7F
-        add     ebx, 0xFFFF7F7F
-        or      ebx, ecx
+        xor     ebx, edx
+        and     ecx, 0x00008080
         sub     eax, edx
-        not     ebx
         jnz     7f
-        test    ebx, ebx
+        and     ebx, ecx
         jz      0b
         jmp     5f
 
 .Lstrcmp4:
 0:      mov     eax, [esi]
         mov     edx, [edi]
+        mov     ecx, 0xfefefeff
+        mov     ebx, 0xffffffff
         add     esi, 4
+        add     ecx, edx
         add     edi, 4
-        mov     ecx, edx
-        mov     ebx, edx
-        and     ebx, 0x7F7F7F7F
-        or      ecx, 0x7F7F7F7F
-        add     ebx, 0x7F7F7F7F
-        or      ebx, ecx
+        xor     ebx, edx
+        and     ecx, 0x80808080
         sub     eax, edx
-        not     ebx
         jnz     7f
-        test    ebx, ebx
+        and     ebx, ecx
         jz      0b
 
 5:      xor     eax, eax
@@ -345,9 +341,11 @@ strcmp:
         add     esp, stacksize
         ret
 
-7:      bsf     ecx, eax
-        bsf     ebx, ebx
+7:      mov     esi, ecx
+        bsf     ecx, eax
+        and     ebx, esi
         jz      0f
+        bsf     ebx, ebx
         cmp     ecx, ebx
         cmova   ecx, ebx
 0:      add     eax, edx
@@ -372,32 +370,32 @@ strcmp:
 .type strlen, @function
 strlen:
         inStr   = 4
-        mov     eax, inStr[esp]
-        mov     ecx, eax
-        cmp     byte ptr [eax], 0
-        jz      1f
-0:      test    eax, 3
+        mov     edx, inStr[esp]
+        mov     ecx, edx
+        cmp     byte ptr [edx], 0
+        je      1f
+0:      test    edx, 3
         jz      0f
-        add     eax, 1
-        cmp     byte ptr [eax], 0
+        add     edx, 1
+        cmp     byte ptr [edx], 0
         jne     0b
-        sub     eax, ecx
+        sub     edx, ecx
+        mov     eax, edx
         ret
 
 1:      xor     eax, eax
         ret
 
-1:      lea     eax, [eax + 4]
-0:      mov     ecx, [eax]
-        mov     edx, ecx
-        and     ecx, 0x7F7F7F7F
-        or      edx, 0x7F7F7F7F
-        add     ecx, 0x7F7F7F7F
-        or      ecx, edx
-        not     ecx
-        bsf     edx, ecx
+1:      lea     edx, [edx + 4]
+0:      mov     eax, [edx]
+        mov     ecx, 0xfefefeff
+        add     ecx, eax
+        not     eax
+        and     ecx, 0x80808080
+        and     eax, ecx
         jz      1b
-        shr     edx, 3
+        bsf     eax, eax
+        shr     eax, 3
         add     eax, edx
         sub     eax, inStr[esp]
         ret
@@ -494,5 +492,62 @@ memcmp:
         .4byte  .Lmemcmp2
         .4byte  .Lmemcmp1
 .text
+
+.global strchr
+#.type strchr, @function
+strchr:
+        stacksize = 4 * 3
+        inStr   = stacksize + 4 * 1
+        chr     = stacksize + 4 * 2
+        sub     esp, stacksize
+        mov     0 * 4[esp], ebx
+        mov     1 * 4[esp], esi
+        mov     2 * 4[esp], edi
+        mov     eax, inStr[esp]
+        movzx   ecx, byte ptr chr[esp]
+        imul    ecx, 0x1010101
+0:      test    eax, 3
+        jz      1f
+        movzx   edx, byte ptr [eax]
+        cmp     dl, cl
+        je      9f
+        add     eax, 1
+        test    dl, dl
+        jnz     0b
+
+8:      xor     eax, eax
+9:      mov     ebx, 0 * 4[esp]
+        mov     esi, 1 * 4[esp]
+        mov     edi, 2 * 4[esp]
+        add     esp, 4 * 3
+        ret
+
+1:      mov     edx, [eax]
+        mov     esi, ecx
+        mov     ebx, 0xfefefeff
+        mov     edi, 0xfefefeff
+        xor     esi, edx
+        add     ebx, edx
+        not     edx
+        add     edi, esi
+        and     ebx, 0x80808080
+        not     esi
+        and     edi, 0x80808080
+        and     esi, edi
+        jnz     0f
+        lea     eax, [eax + 4]
+        and     edx, ebx
+        jz      1b
+        jmp     8b
+
+0:      bsf     esi, esi
+        and     edx, ebx
+        jz      0f
+        bsf     edx, edx
+        cmp     esi, edx
+        ja      8b
+0:      shr     esi, 3
+        add     eax, esi
+        jmp     9b
 
 #memcmp memcpy memmove

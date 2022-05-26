@@ -25,13 +25,13 @@ uint64_t PartitionDevice::GetBlockCount() const
     return partition->lastLBA - partition->firstLBA + 1;
 }
 
-auto PartitionDevice::Read(void* buf, uint64_t blkNum, size_t blkCnt) -> BlockDeviceError
+auto PartitionDevice::Read(void* buf, uint64_t blkNum, size_t blkCnt) -> boot::IOStatus
 {
     auto current = (unsigned char*)buf;
     blkNum += partition->firstLBA;
     // TODO: add block device interface and his error codes
     if (blkNum + blkCnt > partition->lastLBA + 1) {
-        return IBlockDevice::AccessOutOfRange;
+        return boot::IOStatus::AccessOutOfRange;
     }
     bios::disk::AddressPacket addr = {};
     addr.size = sizeof(addr);
@@ -41,13 +41,13 @@ auto PartitionDevice::Read(void* buf, uint64_t blkNum, size_t blkCnt) -> BlockDe
         addr.lba = blkNum;
         int r = bios::disk::Read(diskNum, &addr);
         if (r != 0) {
-            return (BlockDeviceError)r;
+            return boot::IOStatus(r);
         }
         blkCnt -= addr.blkCount;
         blkNum += addr.blkCount;
         current += addr.blkCount * blkSize;
     }
-    return IBlockDevice::NoError;
+    return boot::IOStatus::NoError;
 }
 
 } // namespace i686

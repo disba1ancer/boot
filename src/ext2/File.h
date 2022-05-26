@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include "ext2.h"
 #include "boot/UniquePtr.hpp"
+#include "boot/ioInterface.h"
 
 namespace boot {
 namespace ext2 {
@@ -20,7 +21,7 @@ public:
     auto GetSize() const -> uint64_t;
     auto GetGID() const -> uint32_t;
     bool IsDirectory() const;
-    int  Read(void* buf, uint64_t start, size_t length);
+    auto Read(void* buf, size_t length, size_t* readCnt, uint64_t start) -> IOStatus;
     auto GetDriver() const -> Driver&;
 private:
     auto MapBlock(uint32_t blockNum) -> uint32_t;

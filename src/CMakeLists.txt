@@ -53,7 +53,7 @@ add_library(boot_std STATIC
     boot_std/include/stdlib.h
 )
 target_include_directories(boot_std PUBLIC boot_std/include)
-target_link_libraries(boot_std PUBLIC supc++ gcc)
+target_link_libraries(boot_std PUBLIC boot_std_int supc++ gcc)
 
 add_library(generic STATIC
     generic/include/boot/conout.h
@@ -61,7 +61,8 @@ add_library(generic STATIC
     generic/include/boot/Conout_preimpl.hpp
     generic/include/boot/endian.h
     generic/include/boot/gpt.h
-    generic/include/boot/IBlockDevice.h
+    generic/include/boot/ioInterface.h
+    generic/include/boot/StatusCode.hpp
     generic/include/boot/UniquePtr.hpp
     generic/include/boot/util.h
     generic/include/boot/util.hpp

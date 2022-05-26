@@ -8,7 +8,11 @@ namespace ext2 {
 
 Directory::Directory(File&& file) :
     file(boot::Move(file))
-{}
+{
+    if (!this->file.IsDirectory()) {
+        std::terminate();
+    }
+}
 
 DirectoryIterator Directory::begin()
 {
@@ -33,7 +37,10 @@ void DirectoryIterator::Next()
         next = 0;
     } else {
         ::ext2::Directory dirEnt;
-        dir->file.Read(&dirEnt, pos, sizeof(dirEnt));
+        auto result = dir->file.Read(&dirEnt, sizeof(dirEnt), nullptr, pos);
+        if (result != IOStatus::NoError) {
+            std::terminate();
+        }
         pos += boot::ELoad(dirEnt.length);
     }
 }
@@ -46,15 +53,15 @@ bool DirectoryIterator::IsEqual(const DirectoryIterator& oth) const
 DirectoryEntry DirectoryIterator::Entry()
 {
     ::ext2::Directory dirEnt;
-    if (dir->file.Read(&dirEnt, pos, sizeof(dirEnt)) != IBlockDevice::NoError) {
+    if (dir->file.Read(&dirEnt, sizeof(dirEnt), nullptr, pos) != IOStatus::NoError) {
         std::terminate();
     }
     next = boot::ELoad(dirEnt.length);
     UniquePtr<char[]> name = new char[dirEnt.nameLen + 1];
     name[dirEnt.nameLen] = 0;
     if (
-        dir->file.Read(name.Get(), pos + sizeof(dirEnt), dirEnt.nameLen) !=
-            IBlockDevice::NoError
+        dir->file.Read(name.Get(), dirEnt.nameLen, nullptr, pos + sizeof(dirEnt)) !=
+            IOStatus::NoError
     ) {
         std::terminate();
     }
@@ -99,12 +106,17 @@ DirectoryEntry::DirectoryEntry(
 
 File DirectoryEntry::Open() const
 {
-    return driver->OpenINode(iNode);
+    return driver->OpenByINode(iNode);
 }
 
 const char* DirectoryEntry::Name() const
 {
     return name.Get();
+}
+
+size_t DirectoryEntry::NameLen() const
+{
+    return nameLen;
 }
 
 ::ext2::FileType DirectoryEntry::Type() const

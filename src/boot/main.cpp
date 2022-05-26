@@ -25,7 +25,7 @@ extern "C" void boot_main(boot_StartupInfo *si [[maybe_unused]], size_t count, M
     using namespace i686::bios;
     auto &out = boot::Conout::instance;
     out.PutStr(str);
-    char buf[17];
+    char buf[1024];
     for (size_t i = 0; i < count; ++i) {
         out.PutStr("0x");
         boot::UToStr(buf, 17, memmap[i].startRegion, 16);
@@ -43,14 +43,14 @@ extern "C" void boot_main(boot_StartupInfo *si [[maybe_unused]], size_t count, M
     }
     i686::PartitionDevice part(si->diskNum, &si->part);
     boot::ext2::Driver ext2drv(&part);
-    boot::ext2::Directory dir(ext2drv.OpenINode(2));
-    for (auto&& entry : dir) {
-        out.PutStr(entry.Name());
-        if (strcmp(entry.Name(), "test") == 0) {
-            out.PutStr("/cmp");
-        }
-        out.PutC('\n');
+    auto kernel = ext2drv.OpenByPath("/bin/kernel");
+    uint64_t pos = 0;
+    size_t readSize;
+    while (kernel.Read(buf, 1024, &readSize, pos) == boot::IOStatus::NoError) {
+        out.Write(buf, boot::Min(1024, readSize));
+        pos += readSize;
     }
+    out.PutC('\n');
     while (true) {
         auto key = kbrd::GetKey();
         switch (key.ascii) {
