@@ -51,6 +51,36 @@ BOOT_STRUCT(boot_BE64U) {
     unsigned char val[8];
 };
 
+BOOT_UNION(boot_RE16S) {
+    boot_LE16S l;
+    boot_BE16S b;
+};
+
+BOOT_UNION(boot_RE32S) {
+    boot_LE32S l;
+    boot_BE32S b;
+};
+
+BOOT_UNION(boot_RE64S) {
+    boot_LE64S l;
+    boot_BE64S b;
+};
+
+BOOT_UNION(boot_RE16U) {
+    boot_LE16U l;
+    boot_BE16U b;
+};
+
+BOOT_UNION(boot_RE32U) {
+    boot_LE32U l;
+    boot_BE32U b;
+};
+
+BOOT_UNION(boot_RE64U) {
+    boot_LE64U l;
+    boot_BE64U b;
+};
+
 #define BOOT_ENDIAN_BSWAP {\
     typedef unsigned char uchar;\
     uchar* data = (uchar*)&val;\
@@ -82,7 +112,7 @@ inline uint16_t boot_LE16ULoad(const boot_LE16U* val)
 {
     return
         (uint16_t)val->val[0] |
-        (uint16_t)val->val[1] << 8;
+        (uint16_t)((uint16_t)val->val[1] << 8);
 }
 
 #ifdef BOOT_BIG_ENDIAN_HOST
@@ -123,7 +153,7 @@ inline int16_t boot_LE16SLoad(const boot_LE16S* val)
 {
     return
         (int16_t)val->val[0] |
-        (int16_t)val->val[1] << 8;
+        (int16_t)((int16_t)val->val[1] << 8);
 }
 
 #ifdef BOOT_BIG_ENDIAN_HOST
@@ -164,7 +194,7 @@ inline uint16_t boot_BE16ULoad(const boot_BE16U* val)
 {
     return
         (uint16_t)val->val[1] |
-        (uint16_t)val->val[0] << 8;
+        (uint16_t)((uint16_t)val->val[0] << 8);
 }
 
 #ifdef BOOT_BIG_ENDIAN_HOST
@@ -205,7 +235,7 @@ inline int16_t boot_BE16SLoad(const boot_BE16S* val)
 {
     return
         (int16_t)val->val[1] |
-        (int16_t)val->val[0] << 8;
+        (int16_t)((int16_t)val->val[0] << 8);
 }
 
 #ifdef BOOT_BIG_ENDIAN_HOST
@@ -238,10 +268,41 @@ inline int64_t boot_BE64SLoad(const boot_BE64S* val)
         (int64_t)val->val[0] << 56U;
 }
 
+enum boot_Endian {
+    boot_Endian_Little,
+    boot_Endian_Big
+};
+
+#define GENERATE(bit)\
+inline int##bit##_t boot_RE##bit##SLoad(const boot_RE##bit##S* val, int endian) {\
+    if (endian == boot_Endian_Little) {\
+        return boot_LE##bit##SLoad(&val->l);\
+    } else {\
+        return boot_BE##bit##SLoad(&val->b);\
+    }\
+}\
+inline uint##bit##_t boot_RE##bit##ULoad(const boot_RE##bit##U* val, int endian) {\
+    if (endian == boot_Endian_Little) {\
+        return boot_LE##bit##ULoad(&val->l);\
+    } else {\
+        return boot_BE##bit##ULoad(&val->b);\
+    }\
+}
+
+GENERATE(16)
+GENERATE(32)
+GENERATE(64)
+
+#undef GENERATE
+
 #ifdef __cplusplus
 } //extern "C"
 
 namespace boot {
+
+using Endian = ::boot_Endian;
+inline constexpr auto Endian_Little = ::boot_Endian_Little;
+inline constexpr auto Endian_Big =  ::boot_Endian_Big;
 
 #define GENERATE(bit)\
 inline uint##bit##_t ELoad(const boot_LE##bit##U& val) {\
@@ -255,6 +316,12 @@ inline uint##bit##_t ELoad(const boot_BE##bit##U& val) {\
 }\
 inline int##bit##_t ELoad(const boot_BE##bit##S& val) {\
     return boot_BE##bit##SLoad(&val);\
+}\
+inline uint##bit##_t ELoad(const boot_RE##bit##U& val, Endian en) {\
+    return boot_RE##bit##ULoad(&val, en);\
+}\
+inline int##bit##_t ELoad(const boot_RE##bit##S& val, Endian en) {\
+    return boot_RE##bit##SLoad(&val, en);\
 }
 
 GENERATE(16)

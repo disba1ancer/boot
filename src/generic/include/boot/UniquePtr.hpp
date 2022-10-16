@@ -61,6 +61,7 @@ public:
     {
         ptr = src.ptr;
         src.ptr = nullptr;
+        return *this;
     }
     ~UniquePtr_Base()
     {

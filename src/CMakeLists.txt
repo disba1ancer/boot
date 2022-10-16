@@ -53,28 +53,30 @@ add_library(boot_std STATIC
     boot_std/include/stdlib.h
 )
 target_include_directories(boot_std PUBLIC boot_std/include)
-target_link_libraries(boot_std PUBLIC boot_std_int supc++ gcc)
+target_link_libraries(boot_std PUBLIC supc++ gcc)
 
 add_library(generic STATIC
-    generic/include/boot/conout.h
+    elf/elf.h
+    ext2/Directory.cpp
+    ext2/Directory.h
+    ext2/Driver.cpp
+    ext2/Driver.h
+    ext2/File.cpp
+    ext2/File.h
+    ext2/ext2.h
     generic/include/boot/Conout.hpp
     generic/include/boot/Conout_preimpl.hpp
+    generic/include/boot/StatusCode.hpp
+    generic/include/boot/UniquePtr.hpp
+    generic/include/boot/virtual_alloc.h
+    generic/include/boot/conout.h
     generic/include/boot/endian.h
     generic/include/boot/gpt.h
     generic/include/boot/ioInterface.h
-    generic/include/boot/StatusCode.hpp
-    generic/include/boot/UniquePtr.hpp
     generic/include/boot/util.h
     generic/include/boot/util.hpp
     generic/src/endian.c
     generic/src/util.c
-    ext2/ext2.h
-    ext2/Directory.h
-    ext2/Directory.cpp
-    ext2/Driver.h
-    ext2/Driver.cpp
-    ext2/File.h
-    ext2/File.cpp
 )
 target_include_directories(generic PUBLIC generic/include)
 target_link_libraries(generic PUBLIC boot_std)
@@ -84,6 +86,7 @@ add_library(platform_i686 STATIC
     platform/i686/Conout_impl.cpp
     platform/i686/alloc.c
     platform/i686/alloc.h
+    platform/i686/virtual_alloc.c
     platform/i686/bios_disk.h
     platform/i686/bios_disk.s
     platform/i686/bios_kbrd.h

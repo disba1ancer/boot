@@ -89,7 +89,7 @@ size_t boot_##p##ToStr(char* str, size_t size, t num, int radix) {\
     size_t result = 0;\
     PutForward(str, size, 0, &result);\
     if (num == 0) {\
-        PutZero(str, size - 1, &result);\
+        PutZero(str, size, &result);\
     } else {\
         switch (radix) {\
             case 8:\

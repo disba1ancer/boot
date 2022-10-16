@@ -3,16 +3,16 @@
 
 #include <stdint.h>
 #include "boot/util.h"
+#include "stdalign.h"
 
 typedef enum i686_SegTypeFlag {
-
     i686_SegType_TSS16 = 1 << 8,
     i686_SegType_TSS32 = 9 << 8,
     i686_SegType_TSSCommon = 1 << 8,
     i686_SegType_TSSMask = 0x15 << 8,
-    i686_SegType_Busy = 2 << 8,
+    i686_SegType_BusyTSS = 2 << 8,
 
-    i686_SegType_LDT = 0x12 << 8,
+    i686_SegType_LDT = 2 << 8,
 
     i686_SegType_ReadWrite = 0x12 << 8,
     i686_SegType_Read = 0x10 << 8,
@@ -39,7 +39,7 @@ typedef enum i686_DescFlag {
     i686_DescFlag_UserFlag = 1 << 20,
     i686_DescFlag_Long = 2 << 20,
     i686_DescFlag_OP32 = 4 << 20,
-    i686_DescFlag_PageGranularity = 8 << 20,
+    i686_DescFlag_LimitIn4K = 8 << 20,
 
     i686_DescFlag_Present = 1 << 15,
 } i686_DescFlag;
@@ -74,6 +74,60 @@ constexpr inline i686_Descriptor i686_MakeGateDescriptor(uint32_t offset, uint32
 }
 #undef i686_internal_MakeGateDescriptor
 #endif
+
+typedef enum i686_PageEntryFlag {
+    i686_PageEntryFlag_Present = 1 << 0,
+    i686_PageEntryFlag_Write = 1 << 1,
+    i686_PageEntryFlag_User = 1 << 2,
+    i686_PageEntryFlag_OnlyReadCache = 1 << 3,
+    i686_PageEntryFlag_NoCache = 1 << 4,
+    i686_PageEntryFlag_Accessed = 1 << 5,
+    i686_PageEntryFlag_Dirty = 1 << 6,
+    i686_PageEntryFlag_PAT = 1 << 7,
+    i686_PageEntryFlag_Global = 1 << 8,
+} i686_PageEntryFlag;
+
+typedef struct i686_PageEntry {
+    uint32_t data;
+} i686_PageEntry;
+
+#define i686_internal_MakePageEntry(phyPage, flags) { ((phyPage) & 0xFFFFF000U) | ((flags) & 0xFFFU) }
+
+#ifndef __cplusplus
+#define i686_MakePageEntry(phyPage, flags) i686_internal_MakePageEntry(phyPage, flags)
+#else
+constexpr inline i686_PageEntry i686_MakeSegDescriptor(uint32_t phyPage, uint32_t flags)
+{
+    return i686_internal_MakePageEntry(phyPage, flags);
+}
+#undef i686_internal_MakePageEntry
+#endif
+
+typedef struct x86_64_PageEntry {
+    alignas(8) uint64_t data;
+} x86_64_PageEntry;
+
+#define x86_64_internal_MakePageEntry(phyPage, flags) { ((phyPage) & 0xFFFFFFFFFFFFF000U) | ((flags) & 0xFFFU) }
+
+#ifndef __cplusplus
+#define x86_64_MakePageEntry(phyPage, flags) x86_64_internal_MakePageEntry(phyPage, flags)
+#else
+constexpr inline x86_64_PageEntry x86_64_MakeSegDescriptor(uint64_t phyPage, uint32_t flags)
+{
+    return x86_64_internal_MakePageEntry(phyPage, flags);
+}
+#undef x86_64_internal_MakePageEntry
+#endif
+
+inline uint64_t x86_64_PageEntry_GetAddr(const x86_64_PageEntry* entry)
+{
+    return entry->data & 0xFFFFFFFFFFFFF000U;
+}
+
+inline uint32_t x86_64_PageEntry_GetFlags(const x86_64_PageEntry* entry)
+{
+    return entry->data & 0xFFFU;
+}
 
 typedef struct i686_InterruptFrame {
     uint32_t eip;

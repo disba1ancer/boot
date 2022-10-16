@@ -66,8 +66,9 @@ int Driver::ReadBlock(void* buf, uint32_t blockNum)
     }
     auto result = device->Read(
         buf,
-        Mul2N(blockNum, logSectorsPerBlock),
-        Mul2N(1, Max(0, logSectorsPerBlock))
+        Mul2N(1, Max(0, logSectorsPerBlock)),
+        nullptr,
+        Mul2N(blockNum, logSectorsPerBlock)
     );
     if (result != IOStatus::NoError) {
         return int(result);
@@ -81,8 +82,9 @@ int Driver::ReadBlockSpecial(void* buf, uint32_t blockNum)
     if (startSect != bufStartSect) {
         auto result = device->Read(
             this->buf.Get() + GetBlockSize(),
-            startSect,
-            Mul2N(1, Max(0, logSectorsPerBlock))
+            Mul2N(1, Max(0, logSectorsPerBlock)),
+            nullptr,
+            startSect
         );
         if (result != IOStatus::NoError) {
             bufStartSect = InvalidSector;

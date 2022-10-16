@@ -6,6 +6,7 @@
 #include "membios.h"
 #include "boot/util.h"
 #include "alloc.h"
+#include "boot/virtual_alloc.h"
 
 #define BOOT_ALLOC_BLOCK_SIZE ((size_t)16U)
 
@@ -47,8 +48,6 @@ static void boot_BuddyRegion_Construct_phase2(boot_BuddyRegion *region, void* pt
 static int boot_BuddyRegion_TogglePairBit(boot_BuddyRegion *region, void *block, size_t order);
 static void *boot_BuddyRegion_AllocBlock(boot_BuddyRegion *region, size_t order);
 static void boot_BuddyRegion_FreeBlock(boot_BuddyRegion *region, void *block, size_t order);
-
-extern byte __bss_end[];
 
 void *heap_start = __bss_end;
 byte *heap_end;
@@ -111,11 +110,6 @@ int toggleBit(unsigned char *val, size_t bitNum)
     return !!(*val & mask);
 }
 
-BOOT_STRUCT(i686_mem_entries) {
-    size_t count;
-    i686_bios_mem_MapEntry entries[];
-};
-
 static int reg_comp(const void *a, const void *b) {
     const i686_bios_mem_MapEntry *left = a;
     const i686_bios_mem_MapEntry *right = b;
@@ -164,6 +158,7 @@ void boot_InitBuddyAlloc()
     boot_BuddyRegion *initialRegion = boot_BuddyRegion_Construct(mem_start, heap_end);
     allocRegion = initialRegion;
 //  TODO: Add additional regions from int 0x15 AX=0xE820
+    boot_InitVirtualAlloc();
 }
 
 i686_mem_entries *FakeMemmapRegions(void **mem_start, void *end)
@@ -310,6 +305,7 @@ void ExcludeAbnormalRegions(i686_mem_entries *memmap, size_t count, void **mem_s
                     memmap->entries[lastRemoved] = memmap->entries[i];
                 }
                 lastRemoved++;
+                /* fallthrough */
             case FullIntersect:
                 i++;
                 break;

@@ -120,7 +120,7 @@ I686_EnterRealMode:
 
 realmod_entry:
         mov     eax, cr0
-        and     eax, ~1
+        and     eax, ~0x80000001
         mov     cr0, eax
         jmp     far ptr 0x1000:0f
 
@@ -167,4 +167,41 @@ protmod_entry:
         mov     es, ax
         mov     ss, ax
         movzx   esp, sp
+        ret
+
+.text
+.global boot_VirtualEnter
+boot_VirtualEnter:
+        push    ebp
+        mov     ebp, esp
+        add     esp, 0x1F
+        and     esp, 0xFFFFFFF0
+        mov     0[esp], ebx
+        mov     4[esp], esi
+        mov     8[esp], edi
+
+        mov     ecx, 0xC0000080
+        rdmsr
+        or      eax, 0x100
+        wrmsr
+        mov     eax, cr4
+        mov     ecx, boot_x86_64_pml4
+        mov     edx, cr0
+        or      eax, 0x20
+        or      edx, 0x80000000
+        mov     cr4, eax
+        mov     cr3, ecx
+        mov     cr0, edx
+        call    far ptr 0x28:0f
+.code64
+0:      #mov     eax, 0x30
+        #mov     ss, eax
+        mov     dword ptr [esp], offset 0f
+        jmp     8[ebp]
+.code32
+0:      mov     ebx, 0[esp]
+        mov     esi, 4[esp]
+        mov     edi, 8[esp]
+        mov     esp, ebp
+        pop     ebp
         ret

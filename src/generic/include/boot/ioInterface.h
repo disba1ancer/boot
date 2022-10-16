@@ -17,7 +17,7 @@ public:
 
     virtual auto GetBlockSize() const -> size_t = 0;
     virtual auto GetBlockCount() const -> uint64_t = 0;
-    virtual auto Read(void* buf, uint64_t blkNum, size_t blkCnt) -> IOStatus = 0;
+    virtual auto Read(void* buf, size_t blkCnt, size_t* readCnt, uint64_t blkNum) -> IOStatus = 0;
 };
 
 } // namespace boot

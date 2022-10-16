@@ -6,6 +6,8 @@
 #include <stdint.h>
 #include <string.h>
 
+typedef unsigned char byte;
+
 #define BOOT_STRUCT(name) \
     typedef struct name name; \
     struct name
@@ -13,6 +15,14 @@
 #define BOOT_TYPEDEF_STRUCT(name) \
     typedef struct name name; \
     typedef struct name
+
+#define BOOT_UNION(name) \
+    typedef union name name; \
+    union name
+
+#define BOOT_UNION_STRUCT(name) \
+    typedef union name name; \
+    typedef union name
 
 BOOT_STRUCT(boot_DoublyLinkedListElement) {
     boot_DoublyLinkedListElement *next;
@@ -149,13 +159,15 @@ NS_FUNC(boot_, DoublyLinkedList_Remove)
 template <typename A, typename B>
 requires (requires(A a, B b) { a < b; })
 constexpr auto Min(const A& a, const B& b) -> decltype(a + b) {
-    return (a < b) ? a : b;
+    using T = decltype(a + b);
+    return (T(a) < T(b)) ? a : b;
 }
 
 template <typename A, typename B>
 requires (requires(A a, B b) { a > b; })
 constexpr auto Max(const A& a, const B& b) -> decltype(a + b) {
-    return (a > b) ? a : b;
+    using T = decltype(a + b);
+    return (T(a) > T(b)) ? a : b;
 }
 
 #define TMINMAX(bits)\

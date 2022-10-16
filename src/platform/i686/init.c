@@ -1,12 +1,6 @@
 #include "alloc.h"
 #include "init.h"
 #include <stdlib.h>
-#include "membios.h"
-
-BOOT_STRUCT(i686_mem_entries) {
-    size_t count;
-    i686_bios_mem_MapEntry entries[];
-};
 
 extern unsigned char __bss_end[];
 

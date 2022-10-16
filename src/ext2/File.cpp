@@ -94,22 +94,10 @@ IOStatus File::Read(void* buf, size_t length, size_t* readCnt, uint64_t start)
         offset += readSize;
     }
 
-    while (length - offset > blockSize) {
-        auto result = ReadBlock(cbuf + offset, currentBlock);
-        if (result != int(IOStatus::NoError)) {
-            if (readCnt) {
-                *readCnt = offset;
-            }
-            return IOStatus(result);
-        }
-        ++currentBlock;
-        offset += blockSize;
-    }
-
-    if (length - offset > 0) {
-        auto readSize = length - offset;
-        lastDataBlock = currentBlock;
+    while (length > offset) {
+        auto readSize = boot::Min(length - offset, blockSize - bufferOffset);
         auto result = ReadBlock(dataCache.Get(), currentBlock);
+        lastDataBlock = currentBlock;
         if (result != int(IOStatus::NoError)) {
             lastDataBlock = 0;
             if (readCnt) {
@@ -117,8 +105,11 @@ IOStatus File::Read(void* buf, size_t length, size_t* readCnt, uint64_t start)
             }
             return IOStatus(result);
         }
+        lastDataBlock = currentBlock;
         memcpy(cbuf + offset, dataCache.Get() + bufferOffset, readSize);
+        ++currentBlock;
         offset += readSize;
+        bufferOffset = 0;
     }
 
     if (readCnt) {
