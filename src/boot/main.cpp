@@ -19,31 +19,31 @@
 #include "boot/virtual_alloc.h"
 #include "elf/elf.h"
 
-char str[] = "Hello, World!\n";
+char str[] = "Loading /bin/kernel\n";
 
 using i686::bios::mem::MapEntry;
 
-extern "C" void boot_main(boot_StartupInfo *si [[maybe_unused]], size_t count, MapEntry *memmap)
+static void LoadAndStartKernel(boot_StartupInfo *si);
+
+extern "C" void boot_main(boot_StartupInfo *si)
 {
     using namespace i686::bios;
     auto &out = boot::Conout::instance;
     out.PutStr(str);
-    char buf[1024];
-    for (size_t i = 0; i < count; ++i) {
-        out.PutStr("0x");
-        boot::UToStr(buf, 17, memmap[i].startRegion, 16);
-        out.PutStr(buf);
-        out.PutStr(" 0x");
-        boot::UToStr(buf, 17, memmap[i].regionSize, 16);
-        out.PutStr(buf);
-        out.PutStr(" 0x");
-        boot::UToStr(buf, 17, memmap[i].type, 16);
-        out.PutStr(buf);
-        out.PutStr(" 0x");
-        boot::UToStr(buf, 17, memmap[i].flags, 16);
-        out.PutStr(buf);
-        out.PutC('\n');
-    }
+    LoadAndStartKernel(si);
+    while (true) {
+        auto key = kbrd::GetKey();
+        switch (key.ascii) {
+            case 4:
+            case 3:
+                goto whileEnd;
+        }
+        out.PutC(key.ascii);
+    } whileEnd:;
+}
+
+void LoadAndStartKernel(boot_StartupInfo *si)
+{
     i686::PartitionDevice part(si->diskNum, &si->part);
     boot::ext2::Driver ext2drv(&part);
     auto kernel = ext2drv.OpenByPath("/bin/kernel");
@@ -115,13 +115,4 @@ extern "C" void boot_main(boot_StartupInfo *si [[maybe_unused]], size_t count, M
         }
     }
     boot_VirtualEnter(boot::ELoad(header.entry, e));
-    while (true) {
-        auto key = kbrd::GetKey();
-        switch (key.ascii) {
-            case 4:
-            case 3:
-                goto whileEnd;
-        }
-        out.PutC(key.ascii);
-    } whileEnd:;
 }

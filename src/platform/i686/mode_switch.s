@@ -170,15 +170,16 @@ protmod_entry:
         ret
 
 .text
-.global boot_VirtualEnter
-boot_VirtualEnter:
+.global boot_VirtualEnterASM
+boot_VirtualEnterASM:
         push    ebp
         mov     ebp, esp
-        add     esp, 0x1F
+        sub     esp, 0x4
+        mov     -4[ebp], ebx
         and     esp, 0xFFFFFFF0
-        mov     0[esp], ebx
-        mov     4[esp], esi
-        mov     8[esp], edi
+        mov     -8[ebp], esi
+        add     esp, 8
+        mov     -12[ebp], edi
 
         mov     ecx, 0xC0000080
         rdmsr
@@ -194,14 +195,13 @@ boot_VirtualEnter:
         mov     cr0, edx
         call    far ptr 0x28:0f
 .code64
-0:      #mov     eax, 0x30
-        #mov     ss, eax
-        mov     dword ptr [esp], offset 0f
-        jmp     8[ebp]
+0:      mov     dword ptr [esp], offset 0f
+        call    8[ebp]
+        retfd
 .code32
-0:      mov     ebx, 0[esp]
-        mov     esi, 4[esp]
-        mov     edi, 8[esp]
+0:      mov     ebx, -4[ebp]
+        mov     esi, -8[ebp]
+        mov     edi, -12[ebp]
         mov     esp, ebp
         pop     ebp
         ret

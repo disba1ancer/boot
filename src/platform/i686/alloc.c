@@ -361,7 +361,6 @@ boot_BuddyRegion *boot_BuddyRegion_Construct(void *regionStart, void *regionEnd)
     return buddyRegion;
 }
 
-/* TODO: Check working of this algorithm */
 void boot_BuddyRegion_Construct_phase2(boot_BuddyRegion *region, void* current)
 {
     size_t size = (size_t)((byte*)region->end - (byte*)current);

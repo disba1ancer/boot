@@ -6,7 +6,8 @@ static size_t currentMemEntry;
 static uintptr_t freePagesStart;
 x86_64_PageEntry (*boot_x86_64_pml4)[512];
 
-static size_t findFirstAvailableEntry(const i686_mem_entries* memmap) {
+static size_t findFirstAvailableEntry(const i686_mem_entries* memmap)
+{
     for (size_t i = 0; i < memmap->count; ++i) {
         if (memmap->entries[i].type == 1) {
             return i;
@@ -73,7 +74,8 @@ void* boot_AllocPage()
     return (void*)page;
 }
 
-static void MapFirstMeg() {
+static void MapFirstMeg()
+{
     uint32_t pageFlags = i686_PageEntryFlag_Present
         | i686_PageEntryFlag_Write | i686_PageEntryFlag_User;
     boot_x86_64_pml4 = boot_AllocPage();
@@ -166,23 +168,51 @@ static x86_64_PageEntry* PageEntry(x86_64_PageEntry* entry, size_t index, int fl
     return pageEntry;
 }
 
-static x86_64_PageEntry* AllocEntryByVirtualAddress(uint64_t virtPageAddr, int flags) {
+static x86_64_PageEntry* FindAllocPageDirectory(uint64_t virtPageAddr)
+{
     x86_64_PageEntry pml4ptr = x86_64_MakePageEntry((uintptr_t)*boot_x86_64_pml4, 0);
     x86_64_PageEntry* pageEntry;
     pageEntry = PageDirectory(&pml4ptr, (size_t)(virtPageAddr >> 39));
     if (pageEntry == NULL) { return NULL; }
     pageEntry = PageDirectory(pageEntry, (size_t)(virtPageAddr >> 30));
     if (pageEntry == NULL) { return NULL; }
-    pageEntry = PageDirectory(pageEntry, (size_t)(virtPageAddr >> 21));
+    return PageDirectory(pageEntry, (size_t)(virtPageAddr >> 21));
+}
+
+static x86_64_PageEntry* AllocEntryByVirtualAddress(uint64_t virtPageAddr, int flags)
+{
+    x86_64_PageEntry* pageEntry = FindAllocPageDirectory(virtPageAddr);
     if (pageEntry == NULL) { return NULL; }
     pageEntry = PageEntry(pageEntry, (size_t)(virtPageAddr >> 12), flags);
     return pageEntry;
 }
 
-void* boot_VirtualAlloc(uint64_t virtPageAddr, int flags) {
+void* boot_VirtualAlloc(uint64_t virtPageAddr, int flags)
+{
     x86_64_PageEntry* pageEntry = AllocEntryByVirtualAddress(virtPageAddr, flags);
     if (pageEntry == NULL) {
         return NULL;
     }
     return (void*)(uintptr_t)x86_64_PageEntry_GetAddr(pageEntry);
+}
+
+static int CreateMappingWindow()
+{
+    const uint64_t mappingWindowPage = (uint64_t)-0x1000;
+    x86_64_PageEntry* pageEntry = FindAllocPageDirectory(mappingWindowPage);
+    if (pageEntry == NULL) { return 0; }
+    x86_64_PageEntry (*pageTableAddr)[512] =
+        (void*)(uintptr_t)x86_64_PageEntry_GetAddr(pageEntry);
+    unsigned pageFlags = i686_PageEntryFlag_Present | i686_PageEntryFlag_Write;
+    (*pageTableAddr)[511] =
+        (x86_64_PageEntry)x86_64_MakePageEntry((uintptr_t)pageTableAddr, pageFlags);
+    return 1;
+}
+
+void boot_VirtualEnterASM(uint64_t entryPoint);
+
+void boot_VirtualEnter(uint64_t entryPoint)
+{
+    if (CreateMappingWindow() == 0) abort();
+    boot_VirtualEnterASM(entryPoint);
 }

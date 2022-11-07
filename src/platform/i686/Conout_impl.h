@@ -15,7 +15,7 @@ private:
     static constexpr std::size_t rows = 25;
     VideoModeInfo modeInfo;
     std::size_t bufferSize;
-    UniquePtr<std::uint16_t[]> buffer;
+    UniquePtr<uint16_t[]> buffer;
     std::size_t startRow;
     std::size_t cursor;
     void Render();
