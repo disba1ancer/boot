@@ -24,11 +24,10 @@ i686_bios_mem_GetMap:
         jmp     I686_EnterRealMode
 0:      mov     eax, context_ptr[ebp]
         mov     [eax], ebx
-        movzx   eax, dx
+        movsx   eax, dx
         mov     edi, -4[ebp]
-        and     eax, 1
         mov     ebx, -8[ebp]
-        xor     eax, 1
+        add     eax, 1
         leave
         ret
 
@@ -39,6 +38,5 @@ memorymap_rm:
         les     di, memchunk_ptr[bp]
         mov     eax, 0xE820
         int     0x15
-        lahf
-        movzx     dx, ah
+        sbb     dx, dx
         jmp     I686_EnterProtMode

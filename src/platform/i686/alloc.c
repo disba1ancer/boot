@@ -15,7 +15,7 @@ _Static_assert(BOOT_ALLOC_BLOCK_SIZE >= alignof(max_align_t), "Fundamental align
 typedef unsigned char byte;
 
 static void *AllocFromRange(void **start, void *end, size_t size);
-static void *AllocFromRangePacked(void **start, void *end, size_t size);
+static void *AllocFromRangeAligned(void **start, void *end, size_t size, size_t align);
 static void *AlignRangeStart(void *start, void *end);
 static void *boot_LinearAlloc(size_t size);
 static uintptr_t AlignUp(uintptr_t val, size_t align);
@@ -56,19 +56,31 @@ static boot_BuddyRegion *allocRegion;
 
 void *AllocFromRange(void **start, void *end, size_t size)
 {
-    size = AlignUp(size, BOOT_ALLOC_BLOCK_SIZE);
-    return AllocFromRangePacked(start, end, size);
+    return AllocFromRangeAligned(start, end, size, BOOT_ALLOC_BLOCK_SIZE);
 }
 
-void *AllocFromRangePacked(void **start, void *end, size_t size)
+//void *AllocFromRangePacked(void **start, void *end, size_t size)
+//{
+//    byte* r = (byte*)(*start);
+//    if ((size_t)((byte*)end - r) >= size) {
+//        *start = (void*)(r + size);
+//        return (void*)r;
+//    }
+//    return 0;
+//}
+
+void *AllocFromRangeAligned(void **start, void *end, size_t size, size_t align)
 {
-    byte* r = (byte*)(*start);
-    if ((size_t)((byte*)end - r) >= size) {
+    uintptr_t r = AlignUp((uintptr_t)(*start), align);
+    if (r < (uintptr_t)end && (uintptr_t)end - r > size) {
         *start = (void*)(r + size);
         return (void*)r;
     }
-    return 0;
+    return NULL;
 }
+
+ #define ALIGN_HELPER(name) sizeof(name), alignof(name)
+ #define ALIGN_HELPER2(name, count) sizeof(name) * (count), alignof(name)
 
 void *AlignRangeStart(void *start, void *end)
 {
@@ -110,15 +122,21 @@ int toggleBit(unsigned char *val, size_t bitNum)
     return !!(*val & mask);
 }
 
+static int calc_flag_weight(const boot_MemoryMapEntry *entry)
+{
+    return (entry->type == i686_bios_mem_AvailableMemory) &&
+        ((entry->flags & 0xF) == 1);
+}
+
 static int reg_comp(const void *a, const void *b) {
-    const i686_bios_mem_MapEntry *left = a;
-    const i686_bios_mem_MapEntry *right = b;
-    int leftk = (left->type == i686_bios_mem_AvailableMemory);
-    int rightk = (right->type == i686_bios_mem_AvailableMemory);
+    const boot_MemoryMapEntry *left = a;
+    const boot_MemoryMapEntry *right = b;
+    int leftk = calc_flag_weight(left);
+    int rightk = calc_flag_weight(right);
     if (leftk == rightk) {
-        if (left->startRegion < right->startRegion) {
+        if (left->begin < right->begin) {
             return -1;
-        } else if (left->startRegion == right->startRegion) {
+        } else if (left->begin == right->begin) {
             return 0;
         }
         return 1;
@@ -126,12 +144,12 @@ static int reg_comp(const void *a, const void *b) {
     return leftk - rightk;
 }
 
-static i686_mem_entries *FakeMemmapRegions(void **mem_start, void *end);
-static i686_mem_entries *PrepareMemmapRegions(void **mem_start, void *end);
-static size_t MergeNormalRegions(i686_mem_entries *memmap);
-static void ExcludeAbnormalRegions(i686_mem_entries *memmap, size_t count, void **mem_start, void *end);
+static boot_MemoryMap *FakeMemmapRegions(void **mem_start, void *end);
+static boot_MemoryMap *PrepareMemmapRegions(void **mem_start, void *end);
+static size_t MergeNormalRegions(boot_MemoryMap *memmap);
+static void ExcludeAbnormalRegions(boot_MemoryMap *memmap, size_t count, void **mem_start, void *end);
 
-static i686_bios_mem_MapEntry fakeMap[] = {
+static boot_MemoryMapEntry fakeMap[] = {
 //    {0x9FC00, 0x400, 2, 1},
 //    {0x500, 0x7000, 1, 1},
 //    {0x7000, 0xF9000, 1, 1},
@@ -151,43 +169,63 @@ static i686_bios_mem_MapEntry fakeMap[] = {
 void boot_InitBuddyAlloc()
 {
     void *mem_start = heap_start;
-    i686_mem_entries *memmap = PrepareMemmapRegions(&mem_start, heap_end);
+    boot_MemoryMap *memmap = PrepareMemmapRegions(&mem_start, heap_end);
 //    memmap->count = MergeNormalRegions(memmap);
     ExcludeAbnormalRegions(memmap, MergeNormalRegions(memmap), &mem_start, heap_end);
     mem_start = AlignRangeStart(mem_start, heap_end);
     boot_BuddyRegion *initialRegion = boot_BuddyRegion_Construct(mem_start, heap_end);
     allocRegion = initialRegion;
-//  TODO: Add additional regions from int 0x15 AX=0xE820
     boot_InitVirtualAlloc();
 }
 
-i686_mem_entries *FakeMemmapRegions(void **mem_start, void *end)
+static boot_MemoryMapEntry* ReadEntries(uint64_t ref)
 {
-    i686_mem_entries *memmap;
-    memmap = AllocFromRangePacked(mem_start, end, sizeof(i686_mem_entries) + sizeof(fakeMap));
+    return (void*)(uintptr_t)ref;
+}
+
+boot_MemoryMap *FakeMemmapRegions(void **mem_start, void *end)
+{
+    boot_MemoryMap *memmap;
+//    memmap = AllocFromRangePacked(mem_start, end, sizeof(i686_mem_entries) + sizeof(fakeMap));
+    memmap = AllocFromRangeAligned(mem_start, end, ALIGN_HELPER(boot_MemoryMap));
     if (memmap == NULL) {
         abort();
     }
-    memmap->count = sizeof(fakeMap) / sizeof(i686_bios_mem_MapEntry);
-    memcpy(memmap->entries, fakeMap, sizeof(fakeMap));
-    qsort(memmap->entries, memmap->count, sizeof(i686_bios_mem_MapEntry), reg_comp);
+    memmap->count = sizeof(fakeMap) / sizeof(boot_MemoryMapEntry);
+    boot_MemoryMapEntry *entries = AllocFromRangeAligned(mem_start, end,
+        ALIGN_HELPER2(boot_MemoryMap, (size_t)memmap->count));
+    if (entries == NULL) {
+        abort();
+    }
+    memmap->entries = (uintptr_t)entries;
+    memcpy(entries, fakeMap, sizeof(fakeMap));
+    qsort(entries, (size_t)memmap->count,
+        sizeof(boot_MemoryMapEntry), reg_comp);
     return memmap;
 }
 
-i686_mem_entries *PrepareMemmapRegions(void **mem_start, void *end)
+boot_MemoryMap *PrepareMemmapRegions(void **mem_start, void *end)
 {
-    i686_mem_entries *memmap;
-    memmap = AllocFromRangePacked(mem_start, end, sizeof(i686_mem_entries));
+    boot_MemoryMap *memmap;
+    memmap = AllocFromRangeAligned(mem_start, end, ALIGN_HELPER(boot_MemoryMap));
     if (memmap == NULL) {
         abort();
     }
     memmap->count = 0;
+    boot_MemoryMapEntry *entries = AllocFromRangeAligned(mem_start, end,
+        ALIGN_HELPER2(boot_MemoryMap, (size_t)memmap->count));
+    if (entries == NULL) {
+        abort();
+    }
+    memmap->entries = (uintptr_t)entries;
     unsigned c = 0;
     do {
-        if (AllocFromRangePacked(mem_start, end, sizeof(i686_bios_mem_MapEntry)) == NULL) {
+        if (AllocFromRangeAligned(mem_start, end,
+            ALIGN_HELPER(boot_MemoryMapEntry)) == NULL)
+        {
             abort();
         }
-        if (!i686_bios_mem_GetMap(&c, memmap->entries + memmap->count)) {
+        if (!i686_bios_mem_GetMap(&c, entries + memmap->count)) {
             break;
         }
         memmap->count += 1;
@@ -195,14 +233,18 @@ i686_mem_entries *PrepareMemmapRegions(void **mem_start, void *end)
     if (memmap->count == 0) {
         abort();
     }
-    qsort(memmap->entries, memmap->count, sizeof(i686_bios_mem_MapEntry), reg_comp);
+    qsort(entries, (size_t)memmap->count,
+        sizeof(boot_MemoryMapEntry), reg_comp);
     return memmap;
 }
 
-size_t MergeNormalRegions(i686_mem_entries *memmap) {
+size_t MergeNormalRegions(boot_MemoryMap *memmap) {
     size_t i, lastMerged = 0;
+    boot_MemoryMapEntry *entries = ReadEntries(memmap->entries);
     for (; lastMerged < memmap->count; ++lastMerged) {
-        if (memmap->entries[lastMerged].type == i686_bios_mem_AvailableMemory) {
+        if (entries[lastMerged].type == i686_bios_mem_AvailableMemory &&
+            (entries[lastMerged].flags & 0xF) == 1)
+        {
             break;
         }
     }
@@ -211,17 +253,18 @@ size_t MergeNormalRegions(i686_mem_entries *memmap) {
     }
     i = lastMerged + 1;
     for (; i < memmap->count; ++i) {
-        i686_bios_mem_MapEntry
-            *last = memmap->entries + lastMerged,
+        boot_MemoryMapEntry
+            *last = entries + lastMerged,
             *current = last + 1
         ;
-        if (current != memmap->entries + i) {
-            memcpy(current, memmap->entries + i, sizeof(i686_bios_mem_MapEntry));
+        if (current != entries + i) {
+            memcpy(current, entries + i,
+                sizeof(boot_MemoryMapEntry));
         }
-        if (last->startRegion + last->regionSize >= current->startRegion) {
-            uint64_t a = current->startRegion - last->startRegion + current->regionSize;
-            uint64_t b = last->regionSize;
-            last->regionSize = boot_MaxU64(a, b);
+        if (last->begin + last->size >= current->begin) {
+            uint64_t a = current->begin - last->begin + current->size;
+            uint64_t b = last->size;
+            last->size = boot_MaxU64(a, b);
 //            memset(current, 0, sizeof(i686_bios_mem_MapEntry));
         } else {
             ++lastMerged;
@@ -239,48 +282,54 @@ enum ExcludeResult {
     FullIntersect = -3
 };
 
-static int ExcludeRegion(i686_bios_mem_MapEntry *a, const i686_bios_mem_MapEntry *b, i686_bios_mem_MapEntry *leftover)
+static int ExcludeRegion(boot_MemoryMapEntry *a, const boot_MemoryMapEntry *b,
+    boot_MemoryMapEntry *leftover)
 {
-    uint64_t aEnd = a->startRegion + a->regionSize;
-    uint64_t bEnd = b->startRegion + b->regionSize;
-    if (bEnd <= a->startRegion) {
+    uint64_t aEnd = a->begin + a->size;
+    uint64_t bEnd = b->begin + b->size;
+    if (bEnd <= a->begin) {
         return Left;
     }
-    if (b->startRegion >= aEnd) {
+    if (b->begin >= aEnd) {
         return Right;
     }
     if (bEnd < aEnd) {
         *leftover = *a;
-        a->startRegion = bEnd;
-        a->regionSize = aEnd - bEnd;
-        if (leftover->startRegion < b->startRegion) {
-            leftover->regionSize = b->startRegion - leftover->startRegion;
+        a->begin = bEnd;
+        a->size = aEnd - bEnd;
+        if (leftover->begin < b->begin) {
+            leftover->size = b->begin - leftover->begin;
             return CenterIntersect;
         }
         return LeftIntersect;
     }
-    if (a->startRegion < b->startRegion) {
-        a->regionSize = b->startRegion - a->startRegion;
+    if (a->begin < b->begin) {
+        a->size = b->begin - a->begin;
         return RightIntersect;
     }
     return FullIntersect;
 }
 
-void ExcludeAbnormalRegions(i686_mem_entries *memmap, size_t count, void **mem_start, void *end)
+void ExcludeAbnormalRegions(boot_MemoryMap *memmap, size_t count,
+    void **mem_start, void *end)
 {
+    boot_MemoryMapEntry *entries = ReadEntries(memmap->entries);
     size_t i = 0;
     size_t allocatedCount = count;
     for (; i < count; ++i) {
-        if (memmap->entries[i].type == i686_bios_mem_AvailableMemory) {
+        if (entries[i].type == i686_bios_mem_AvailableMemory &&
+            (entries[i].flags & 0xF) == 1)
+        {
             break;
         }
     }
     size_t reservedCount = i;
     size_t reservedCurrent = 0;
     size_t lastRemoved = i;
-    i686_bios_mem_MapEntry tempEntry;
+    boot_MemoryMapEntry tempEntry;
     while (reservedCurrent < reservedCount && i < count) {
-        int result = ExcludeRegion(memmap->entries + i, memmap->entries + reservedCurrent, &tempEntry);
+        int result = ExcludeRegion(entries + i,
+            entries + reservedCurrent, &tempEntry);
         switch (result) {
             case Left:
             case LeftIntersect:
@@ -288,21 +337,23 @@ void ExcludeAbnormalRegions(i686_mem_entries *memmap, size_t count, void **mem_s
                 break;
             case CenterIntersect:
                 if (lastRemoved < i) {
-                    memmap->entries[lastRemoved++] = tempEntry;
+                    entries[lastRemoved++] = tempEntry;
                 } else if (allocatedCount < memmap->count) {
-                    memmap->entries[allocatedCount++] = tempEntry;
+                    entries[allocatedCount++] = tempEntry;
                 } else {
-                    if (AllocFromRangePacked(mem_start, end, sizeof(i686_bios_mem_MapEntry)) == NULL) {
+                    if (AllocFromRangeAligned(mem_start, end,
+                        ALIGN_HELPER(boot_MemoryMapEntry)) == NULL)
+                    {
                         abort();
                     }
-                    memmap->entries[allocatedCount++] = tempEntry;
+                    entries[allocatedCount++] = tempEntry;
                     memmap->count = allocatedCount;
                 }
                 break;
             case RightIntersect:
             case Right:
                 if (lastRemoved != i) {
-                    memmap->entries[lastRemoved] = memmap->entries[i];
+                    entries[lastRemoved] = entries[i];
                 }
                 lastRemoved++;
                 /* fallthrough */
@@ -316,9 +367,9 @@ void ExcludeAbnormalRegions(i686_mem_entries *memmap, size_t count, void **mem_s
         return;
     }
     while (i < allocatedCount) {
-        memmap->entries[lastRemoved++] = memmap->entries[i++];
+        entries[lastRemoved++] = entries[i++];
     }
-    qsort(memmap->entries + reservedCount, memmap->count - reservedCount, sizeof(i686_bios_mem_MapEntry), reg_comp);
+    qsort(entries + reservedCount, (size_t)memmap->count - reservedCount, sizeof(boot_MemoryMapEntry), reg_comp);
 }
 
 boot_BuddyRegion *boot_BuddyRegion_Construct(void *regionStart, void *regionEnd)

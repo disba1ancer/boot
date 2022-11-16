@@ -21,8 +21,6 @@
 
 char str[] = "Loading /bin/kernel\n";
 
-using i686::bios::mem::MapEntry;
-
 static void LoadAndStartKernel(boot_StartupInfo *si);
 
 extern "C" void boot_main(boot_StartupInfo *si)

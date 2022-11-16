@@ -68,13 +68,14 @@ add_library(generic STATIC
     generic/include/boot/Conout_preimpl.hpp
     generic/include/boot/StatusCode.hpp
     generic/include/boot/UniquePtr.hpp
-    generic/include/boot/virtual_alloc.h
     generic/include/boot/conout.h
+    generic/include/boot/data.h
     generic/include/boot/endian.h
     generic/include/boot/gpt.h
     generic/include/boot/ioInterface.h
     generic/include/boot/util.h
     generic/include/boot/util.hpp
+    generic/include/boot/virtual_alloc.h
     generic/src/endian.c
     generic/src/util.c
 )
