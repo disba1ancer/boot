@@ -166,7 +166,7 @@ static boot_MemoryMapEntry fakeMap[] = {
 
 };
 
-void boot_InitBuddyAlloc()
+void boot_InitBuddyAlloc(void)
 {
     void *mem_start = heap_start;
     boot_MemoryMap *memmap = PrepareMemmapRegions(&mem_start, heap_end);

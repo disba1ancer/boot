@@ -26,9 +26,9 @@ _start:
         int     0x12
         mov     dx, ax
 
-.a20en: inb     al, 0x92
-        orb     al, 2
-        outb    0x92, al
+.LA20en:in      al, 0x92
+        or      al, 2
+        out     0x92, al
 
 data32  push    offset start32
         jmp     I686_EnterProtMode

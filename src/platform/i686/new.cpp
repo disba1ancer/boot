@@ -10,7 +10,7 @@ void *operator new(size_t size)
     return ptr;
 }
 
-void operator delete(void *ptr)
+void operator delete(void *ptr) noexcept
 {
     return free(ptr);
 }
@@ -20,7 +20,7 @@ void *operator new[](size_t size)
     return operator new(size);
 }
 
-void operator delete[](void *ptr)
+void operator delete[](void *ptr) noexcept
 {
     return operator delete(ptr);
 }

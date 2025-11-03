@@ -79,8 +79,8 @@ typedef enum i686_PageEntryFlag {
     i686_PageEntryFlag_Present = 1 << 0,
     i686_PageEntryFlag_Write = 1 << 1,
     i686_PageEntryFlag_User = 1 << 2,
-    i686_PageEntryFlag_OnlyReadCache = 1 << 3,
-    i686_PageEntryFlag_NoCache = 1 << 4,
+    i686_PageEntryFlag_PWT = 1 << 3, // Write through cache
+    i686_PageEntryFlag_PCD = 1 << 4, // Disable cache
     i686_PageEntryFlag_Accessed = 1 << 5,
     i686_PageEntryFlag_Dirty = 1 << 6,
     i686_PageEntryFlag_PAT = 1 << 7,

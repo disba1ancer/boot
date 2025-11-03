@@ -1,51 +1,4 @@
-cmake_minimum_required(VERSION 3.21)
-
-set(CMAKE_SYSTEM_NAME elf)
-#set(CMAKE_SYSTEM_PROCESSOR i686)
-#set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
-
-#execute_process(
-#    COMMAND
-#        ${CMAKE_ASM_COMPILER} -Wa,--divide -g -c ${CMAKE_CURRENT_SOURCE_DIR}/src/i686/crti.s -o ${CMAKE_CURRENT_BINARY_DIR}/crti.o
-#)
-#execute_process(
-#    COMMAND
-#        ${CMAKE_ASM_COMPILER} -Wa,--divide -g -c ${CMAKE_CURRENT_SOURCE_DIR}/src/i686/crtn.s -o ${CMAKE_CURRENT_BINARY_DIR}/crtn.o
-#)
-
-execute_process(
-    COMMAND
-        ${CMAKE_CXX_COMPILER} -print-file-name=crtbegin.o
-    OUTPUT_VARIABLE BOOT_CRTBEGIN
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-)
-execute_process(
-    COMMAND
-        ${CMAKE_CXX_COMPILER} -print-file-name=crtend.o
-    OUTPUT_VARIABLE BOOT_CRTEND
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-)
-
-set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} -nostdlib -Wa,--divide")
-set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}   -nostdlib -ffreestanding -Wall -Wextra -pedantic -pedantic-errors")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -nostdlib -ffreestanding -Wall -Wextra -pedantic -pedantic-errors -fno-exceptions") # -fno-rtti
-
-set(CMAKE_ASM_LINK_EXECUTABLE "<CMAKE_ASM_COMPILER> <FLAGS> <CMAKE_ASM_LINK_FLAGS> <LINK_FLAGS> ${CMAKE_CURRENT_BINARY_DIR}/crti.o ${BOOT_CRTBEGIN} <OBJECTS> -o <TARGET> <LINK_LIBRARIES> ${BOOT_CRTEND} ${CMAKE_CURRENT_BINARY_DIR}/crtn.o")
-set(CMAKE_C_LINK_EXECUTABLE   "<CMAKE_C_COMPILER>   <FLAGS> <CMAKE_C_LINK_FLAGS>   <LINK_FLAGS> ${CMAKE_CURRENT_BINARY_DIR}/crti.o ${BOOT_CRTBEGIN} <OBJECTS> -o <TARGET> <LINK_LIBRARIES> ${BOOT_CRTEND} ${CMAKE_CURRENT_BINARY_DIR}/crtn.o")
-set(CMAKE_CXX_LINK_EXECUTABLE "<CMAKE_CXX_COMPILER> <FLAGS> <CMAKE_CXX_LINK_FLAGS> <LINK_FLAGS> ${CMAKE_CURRENT_BINARY_DIR}/crti.o ${BOOT_CRTBEGIN} <OBJECTS> -o <TARGET> <LINK_LIBRARIES> ${BOOT_CRTEND} ${CMAKE_CURRENT_BINARY_DIR}/crtn.o")
-
-project(boot LANGUAGES ASM C CXX)
-
-set(CMAKE_C_STANDARD 17)
-set(CMAKE_C_STANDARD_REQUIRED ON)
-set(CMAKE_C_EXTENSIONS OFF)
-set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
-
-set(BOOT_LINKER_SCRIPT ldscripts/i686.ld)
-
-add_library(boot_std STATIC
+add_library(boot_std OBJECT
     boot_std/src/qsort.c
     boot_std/include/btstdbeg.h
     boot_std/include/btstdend.h
@@ -53,9 +6,8 @@ add_library(boot_std STATIC
     boot_std/include/stdlib.h
 )
 target_include_directories(boot_std PUBLIC boot_std/include)
-target_link_libraries(boot_std PUBLIC supc++ gcc)
 
-add_library(generic STATIC
+add_library(generic OBJECT
     elf/elf.h
     ext2/Directory.cpp
     ext2/Directory.h
@@ -82,7 +34,7 @@ add_library(generic STATIC
 target_include_directories(generic PUBLIC generic/include)
 target_link_libraries(generic PUBLIC boot_std)
 
-add_library(platform_i686 STATIC
+add_library(platform_i686 OBJECT
     platform/i686/Conout_impl.h
     platform/i686/Conout_impl.cpp
     platform/i686/alloc.c
@@ -95,6 +47,7 @@ add_library(platform_i686 STATIC
     platform/i686/bios_video.h
     platform/i686/bios_video.s
     platform/i686/exit.c
+    platform/i686/i686.ld
     platform/i686/init.c
     platform/i686/init.h
     platform/i686/init.s
@@ -110,30 +63,17 @@ add_library(platform_i686 STATIC
     platform/i686/PartitionDevice.cpp
     platform/i686/processor.c
     platform/i686/processor.h
+    platform/i686/specs.txt
     platform/i686/vgacon.h
     platform/i686/vgacon.s
 )
-target_link_libraries(platform_i686 PUBLIC generic)
-
-add_library(platform ALIAS platform_i686)
-
-add_executable(boot
-    boot/main.cpp
-    ${BOOT_LINKER_SCRIPT}
+target_link_libraries(platform_i686 PUBLIC generic supc++ gcc)
+target_link_options(platform_i686 INTERFACE
+    -z max-page-size=16
+    -B ${CMAKE_BINARY_DIR}
+    -T ${CMAKE_CURRENT_SOURCE_DIR}/platform/i686/i686.ld
+    -specs=${CMAKE_CURRENT_SOURCE_DIR}/platform/i686/specs.txt
 )
-#target_compile_options(boot PRIVATE
-#    -mgeneral-regs-only
-#)
-target_include_directories(boot PRIVATE
-    .
-    ${CMAKE_CURRENT_BINARY_DIR}/include
-)
-target_link_options(boot PRIVATE
-    -T ${CMAKE_CURRENT_SOURCE_DIR}/${BOOT_LINKER_SCRIPT}
-)
-target_link_libraries(boot PRIVATE platform)
-add_dependencies(boot crti crtn)
-set_target_properties(boot PROPERTIES LINK_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${BOOT_LINKER_SCRIPT})
 
 add_custom_target(crti
     ALL ${CMAKE_ASM_COMPILER} -Wa,--divide -g -c ${CMAKE_CURRENT_SOURCE_DIR}/platform/i686/crti.s -o crti.o
@@ -149,6 +89,24 @@ add_custom_target(crtn
     BYPRODUCTS
         crtn.o
 )
+add_dependencies(platform_i686 crti crtn)
+
+add_library(platform ALIAS platform_i686)
+
+add_executable(boot
+    boot/main.cpp
+)
+#target_compile_options(boot PRIVATE
+#    -mgeneral-regs-only
+#)
+target_include_directories(boot PRIVATE
+    .
+    ${CMAKE_CURRENT_BINARY_DIR}/include
+)
+target_link_libraries(boot PRIVATE platform boot_std generic)
+set_target_properties(boot PROPERTIES LINK_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/platform/i686/i686.ld)
 
 add_custom_target("boot.bin" ALL ${CMAKE_OBJCOPY} -O binary boot boot.bin BYPRODUCTS boot.bin)
 add_dependencies("boot.bin" boot)
+
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/boot.bin DESTINATION boot)

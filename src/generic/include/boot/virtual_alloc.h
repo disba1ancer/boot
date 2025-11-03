@@ -17,7 +17,7 @@ enum boot_MemoryFlags {
     boot_MemoryFlags_Device = 32,
 };
 
-void* boot_AllocPage();
+void* boot_AllocPage(void);
 void* boot_VirtualAlloc(uint64_t virtPageAddr, int flags);
 void boot_VirtualEnter(uint64_t entryPoint);
 

@@ -174,12 +174,10 @@ protmod_entry:
 boot_VirtualEnterASM:
         push    ebp
         mov     ebp, esp
-        sub     esp, 4
-        mov     -4[ebp], ebx
         and     esp, 0xFFFFFFF0
         sub     esp, 8
-        mov     -8[ebp], esi
-        mov     -12[ebp], edi
+        mov     -4[ebp], esi
+        mov     -8[ebp], edi
 
         mov     ecx, 0xC0000080
         rdmsr
@@ -195,9 +193,9 @@ boot_VirtualEnterASM:
         mov     cr3, ecx
         mov     cr0, edx
         call    far ptr 0x28:0f
-        mov     ebx, -4[ebp]
-        mov     esi, -8[ebp]
-        mov     edi, -12[ebp]
+
+        mov     esi, -4[ebp]
+        mov     edi, -8[ebp]
         mov     esp, ebp
         pop     ebp
         ret

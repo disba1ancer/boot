@@ -42,6 +42,7 @@ extern "C" void boot_main(boot_StartupInfo *si)
 
 void LoadAndStartKernel(boot_StartupInfo *si)
 {
+    auto &out = boot::Conout::instance;
     i686::PartitionDevice part(si->diskNum, &si->part);
     boot::ext2::Driver ext2drv(&part);
     auto kernel = ext2drv.OpenByPath("/bin/kernel");
@@ -54,6 +55,7 @@ void LoadAndStartKernel(boot_StartupInfo *si)
         ident.fileClass != elf_Class_C64 ||
         ident.data != elf_DataEnc_LSB
     ) {
+        out.PutStr("Not an ELF or unsupported\n");
         std::terminate();
     }
     static constexpr auto e = boot::Endian_Little;
@@ -63,6 +65,7 @@ void LoadAndStartKernel(boot_StartupInfo *si)
         boot::ELoad(header.type, e) != elf_Type_Executable ||
         boot::ELoad(header.machine,e) != elf_Machine_x86_64
     ) {
+        out.PutStr("Not executable or unsupported platform\n");
         std::terminate();
     }
     static constexpr auto PageSize = 4096;
@@ -76,6 +79,11 @@ void LoadAndStartKernel(boot_StartupInfo *si)
             boot::ELoad(header.programHeaderOff, e)
                 + boot::ELoad(header.progHeadEntrySize, e) * i
         );
+        if (boot::ELoad(programHeader.type, e) !=
+            elf64_SegType_Load)
+        {
+            continue;
+        }
         uint64_t segmentFileStart = boot::ELoad(programHeader.offset, e);
         uint64_t segmentFileEnd = boot::ELoad(programHeader.size, e)
             + segmentFileStart;
@@ -86,20 +94,21 @@ void LoadAndStartKernel(boot_StartupInfo *si)
         segmentLoadStart &= ~(uint64_t)(PageSize - 1);
         int flags = (boot::ELoad(header.flags, e) & 7) + boot_MemoryFlags_Kernel;
         void* dst;
-        if (boot::ELoad(programHeader.size, e) > 0) {
+        if (segmentFileStart < segmentFileEnd) {
             for (;
                 segmentFileStart < segmentFileEnd;
                 segmentFileStart += PageSize, segmentLoadStart += PageSize
             ) {
                 dst = boot_VirtualAlloc(segmentLoadStart, flags);
                 if (dst == nullptr) {
+                    out.PutStr("Out of memory\n");
                     std::terminate();
                 }
                 kernel.Read(dst, PageSize, &readSize, segmentFileStart);
                 memset((byte *)dst + readSize, 0, PageSize - readSize);
             }
             segmentFileEnd &= (PageSize - 1);
-            memset((byte *)dst + segmentFileEnd, 0, PageSize - segmentFileEnd);
+            memset((byte *)dst + segmentFileEnd, 0, (size_t)(PageSize - segmentFileEnd));
         }
         for (;
             segmentLoadStart < segmentLoadEnd;
@@ -107,6 +116,7 @@ void LoadAndStartKernel(boot_StartupInfo *si)
         ) {
             dst = boot_VirtualAlloc(segmentLoadStart, flags);
             if (dst == nullptr) {
+                out.PutStr("Out of memory\n");
                 std::terminate();
             }
             memset(dst, 0, PageSize);

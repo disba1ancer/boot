@@ -4,8 +4,8 @@
 #include "boot/util.h"
 #include "membios.h"
 
-void boot_InitBuddyAlloc();
-void boot_InitVirtualAlloc();
+void boot_InitBuddyAlloc(void);
+void boot_InitVirtualAlloc(void);
 
 extern unsigned char __bss_end[];
 
