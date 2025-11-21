@@ -18,22 +18,23 @@ enum boot_LdrDataType {
 };
 
 enum boot_MemoryMapEntryType {
-    boot_MemoryMapEntryType_AvailableMemory = 1,
+    boot_MemoryMapEntryType_AvailableMemory,
+    boot_MemoryMapEntryType_BootReclaimable,
+    boot_MemoryMapEntryType_SystemReclaimable,
+    boot_MemoryMapEntryType_ReservedMemory,
 };
 
 BOOT_STRUCT(boot_MemoryMapEntry) {
     alignas(8)
     uint64_t begin;
-    uint64_t size;
+    uint64_t end;
     uint32_t type;
-    uint32_t flags;
 };
 
 BOOT_STRUCT(boot_MemoryMap) {
     alignas(8)
     uint64_t entries;
     uint64_t count;
-    uint64_t allocatedBoundary;
 };
 
 #endif // DATA_H

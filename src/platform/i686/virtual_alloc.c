@@ -3,16 +3,15 @@
 #include "boot/virtual_alloc.h"
 #include "processor.h"
 
-static size_t currentMemEntry;
-static uintptr_t freePagesStart;
+static ptrdiff_t currentMemEntry;
 x86_64_PageEntry (*boot_x86_64_pml4)[512];
+static boot_MemoryMap* memmap;
 
-static size_t findFirstAvailableEntry(const boot_MemoryMap* memmap)
+static ptrdiff_t FindNextAvailableEntry(const boot_MemoryMap* memmap, ptrdiff_t from)
 {
     const boot_MemoryMapEntry *entries = (void*)(uintptr_t)(memmap->entries);
-    for (size_t i = 0; i < memmap->count; ++i) {
-        if (entries[i].type == boot_MemoryMapEntryType_AvailableMemory &&
-            (entries[i].flags & 0xF) == 1)
+    for (ptrdiff_t i = from; i < (ptrdiff_t)memmap->count; ++i) {
+        if (entries[i].type == boot_MemoryMapEntryType_AvailableMemory)
         {
             return i;
         }
@@ -22,66 +21,49 @@ static size_t findFirstAvailableEntry(const boot_MemoryMap* memmap)
 
 static void InitPagedAlloc(void)
 {
-    const boot_MemoryMap* memmap = (const boot_MemoryMap*)__bss_end;
-    const boot_MemoryMapEntry *entries = (void*)(uintptr_t)(memmap->entries);
-    currentMemEntry = findFirstAvailableEntry(memmap);
-    freePagesStart = 0x100000;
-    for (;currentMemEntry < memmap->count; ++currentMemEntry) {
-        uint64_t regionStart = entries[currentMemEntry].begin;
-        uint64_t regionEnd = regionStart + entries[currentMemEntry].size;
-        regionStart = (regionStart + 0xFFF) & (~(uint64_t)0xFFF);
-        regionEnd = regionEnd & (~(uint64_t)0xFFF);
-        if (regionStart == regionEnd) {
-            continue;
-        }
-        if (regionStart > UINTPTR_MAX) {
-            abort();
-        }
-        if (regionStart >= freePagesStart) {
-            freePagesStart = (uintptr_t)regionStart;
-            break;
-        } else if (regionEnd > freePagesStart) {
-            break;
-        }
-    }
-    if (currentMemEntry == memmap->count) {
+    boot_MemoryMapEntry *entries = (void*)(uintptr_t)(memmap->entries);
+    currentMemEntry = FindNextAvailableEntry(memmap, 0);
+    if (currentMemEntry == (ptrdiff_t)memmap->count) {
         abort();
     }
+    uint64_t regionStart = entries[currentMemEntry].begin;
+    if (regionStart > UINTPTR_MAX) {
+        abort();
+    }
+    entries[memmap->count].begin = regionStart;
+    entries[memmap->count].end = regionStart;
+    entries[memmap->count].type = boot_MemoryMapEntryType_ReservedMemory;
 }
 
 void* boot_AllocPage(void)
 {
-    uintptr_t page = freePagesStart;
+    boot_MemoryMapEntry *entries = (void*)(uintptr_t)(memmap->entries);
+    uintptr_t page = entries[memmap->count].end;
     if (page == 0) {
         return NULL;
     }
-    freePagesStart += 0x1000;
-    const boot_MemoryMap* memmap = (const boot_MemoryMap*)__bss_end;
-    const boot_MemoryMapEntry* entries = (void*)(uintptr_t)(memmap->entries);
-    uint64_t regionStart = entries[currentMemEntry].begin;
-    uint64_t regionEnd = regionStart + entries[currentMemEntry].size;
-    regionStart = (regionStart + 0xFFF) & (~(uint64_t)0xFFF);
-    regionEnd = regionEnd & (~(uint64_t)0xFFF);
+    entries[memmap->count].end += boot_Alloc_PageSize;
+    uint64_t regionStart = (entries[currentMemEntry].begin += boot_Alloc_PageSize);
+    uint64_t regionEnd = entries[currentMemEntry].end;
 
-    if (freePagesStart != (uintptr_t)regionEnd) {
+    if (regionStart > UINTPTR_MAX) {
+        entries[memmap->count] = (boot_MemoryMapEntry){0};
         return (void*)page;
     }
+    if (regionStart != regionEnd) {
+        return (void*)page;
+    }
+    entries[currentMemEntry] = entries[memmap->count];
     ++currentMemEntry;
-    for (; currentMemEntry != memmap->count; ++currentMemEntry) {
-        regionStart = entries[currentMemEntry].begin;
-        regionEnd = regionStart + entries[currentMemEntry].size;
-        regionStart = (regionStart + 0xFFF) & (~(uint64_t)0xFFF);
-        regionEnd = regionEnd & (~(uint64_t)0xFFF);
-        if (regionStart == regionEnd) {
-            continue;
-        }
-        if (regionStart > UINTPTR_MAX) {
-            break;
-        }
-        freePagesStart = (uintptr_t)regionStart;
+    currentMemEntry = FindNextAvailableEntry(memmap, currentMemEntry);
+    regionStart = entries[currentMemEntry].begin;
+    if (currentMemEntry == (ptrdiff_t)memmap->count || regionStart > UINTPTR_MAX) {
+        entries[memmap->count] = (boot_MemoryMapEntry){0};
         return (void*)page;
     }
-    freePagesStart = 0;
+    entries[memmap->count].begin = regionStart;
+    entries[memmap->count].end = regionStart;
+    entries[memmap->count].type = boot_MemoryMapEntryType_ReservedMemory;
 
     return (void*)page;
 }
@@ -105,18 +87,19 @@ static void MapFirstMeg(void)
     (*dir)[0] = (x86_64_PageEntry)x86_64_MakePageEntry((uintptr_t)table,
         pageFlags);
     for (uint32_t i = 0; i < 0xA0; i += 1) {
-        x86_64_PageEntry entry = x86_64_MakePageEntry((uintptr_t)(i * 0x1000),
+        x86_64_PageEntry entry = x86_64_MakePageEntry((uintptr_t)(i * boot_Alloc_PageSize),
             pageFlags);
         (*table)[i] = entry;
     }
     pageFlags |= i686_PageEntryFlag_PWT | i686_PageEntryFlag_PCD;
     for (uint32_t i = 0xA0; i < 0x100; i += 1) {
         (*table)[i] = (x86_64_PageEntry)
-            x86_64_MakePageEntry((uintptr_t)(i * 0x1000), pageFlags);
+            x86_64_MakePageEntry((uintptr_t)(i * boot_Alloc_PageSize), pageFlags);
     }
 }
 
-void boot_InitVirtualAlloc(void) {
+void boot_InitVirtualAlloc(boot_MemoryMap* memmap_) {
+    memmap = memmap_;
     InitPagedAlloc();
     MapFirstMeg();
 }
@@ -220,14 +203,9 @@ void* boot_VirtualAlloc(uint64_t virtPageAddr, int flags)
 
 static int CreateMappingWindow(void)
 {
-    const uint64_t mappingWindowPage = (uint64_t)-0x1000;
-    x86_64_PageEntry* pageEntry = FindAllocPageDirectory(mappingWindowPage);
-    if (pageEntry == NULL) { return 0; }
-    x86_64_PageEntry (*pageTableAddr)[512] =
-        (void*)(uintptr_t)x86_64_PageEntry_GetAddr(pageEntry);
     unsigned pageFlags = i686_PageEntryFlag_Present | i686_PageEntryFlag_Write;
-    (*pageTableAddr)[511] = (x86_64_PageEntry)
-        x86_64_MakePageEntry((uintptr_t)pageTableAddr, pageFlags);
+    (*boot_x86_64_pml4)[256] = (x86_64_PageEntry)
+        x86_64_MakePageEntry((uintptr_t)boot_x86_64_pml4, pageFlags);
     return 1;
 }
 
@@ -237,11 +215,19 @@ void boot_VirtualEnter(uint64_t entryPoint)
 {
     if (CreateMappingWindow() == 0) abort();
     boot_LdrData *data = malloc(sizeof(boot_LdrData) * 2);
-    boot_MemoryMap *memoryMap = (boot_MemoryMap*)__bss_end;
-    memoryMap->allocatedBoundary = freePagesStart;
+
+    boot_MemoryMapEntry *entries = (void*)(uintptr_t)(memmap->entries);
+    boot_MemoryMapEntry *back = entries + memmap->count;
+    if (back->begin != back->end) {
+        boot_MemoryMapEntry temp = *back;
+        boot_MemoryMapEntry* current = entries + currentMemEntry;
+        memmove(current + 1, current, sizeof(temp) * (memmap->count - currentMemEntry));
+        *current = temp;
+        ++memmap->count;
+    }
     data[0] = (boot_LdrData){ .type = boot_LdrDataType_EntriesCount, .value = 2 };
     data[1] = (boot_LdrData){ .type = boot_LdrDataType_MemoryMap,
-        .value = (uintptr_t)(void*)memoryMap };
+        .value = (uintptr_t)(void*)memmap };
     boot_VirtualEnterASM(entryPoint, data);
     free(data);
 }

@@ -1,8 +1,9 @@
 #include "boot/util.h"
 #include <stdbool.h>
 
-extern inline void boot_DoublyLinkedList_Add(boot_DoublyLinkedList *, boot_DoublyLinkedListElement *);
-extern inline void boot_DoublyLinkedList_Remove(boot_DoublyLinkedList *, boot_DoublyLinkedListElement *);
+extern inline void boot_DoublyLinkedList_Init(boot_DoublyLinkedListElement *);
+extern inline void boot_DoublyLinkedList_Add(boot_DoublyLinkedListElement *, boot_DoublyLinkedListElement *);
+extern inline void boot_DoublyLinkedList_Remove(boot_DoublyLinkedListElement *);
 
 extern inline int  boot_Log2U64(uint64_t val);
 extern inline int  boot_Log2U32(uint32_t val);

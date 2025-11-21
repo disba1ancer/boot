@@ -1,12 +1,13 @@
 #ifndef ALLOC_H
 #define ALLOC_H
 
-#include "boot/util.h"
-#include "membios.h"
+#include "boot/data.h"
 
-void boot_InitBuddyAlloc(void);
-void boot_InitVirtualAlloc(void);
+enum Constants {
+    boot_Alloc_PageSize = 0x1000,
+};
 
-extern unsigned char __bss_end[];
+void boot_InitAlloc(void);
+void boot_InitVirtualAlloc(boot_MemoryMap* memmap);
 
 #endif // ALLOC_H

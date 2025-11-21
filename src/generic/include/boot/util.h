@@ -29,34 +29,32 @@ BOOT_STRUCT(boot_DoublyLinkedListElement) {
     boot_DoublyLinkedListElement *prev;
 };
 
-BOOT_STRUCT(boot_DoublyLinkedList) {
-    boot_DoublyLinkedListElement *begin;
-};
+// BOOT_STRUCT(boot_DoublyLinkedList) {
+//     boot_DoublyLinkedListElement snt;
+// };
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-inline void boot_DoublyLinkedList_Add(boot_DoublyLinkedList *list, boot_DoublyLinkedListElement *elem)
+inline void boot_DoublyLinkedList_Init(boot_DoublyLinkedListElement *list)
 {
-    elem->prev = NULL;
-    elem->next = list->begin;
-    list->begin = elem;
-    if (elem->next != NULL) {
-        elem->next->prev = elem;
-    }
+    list->next = list;
+    list->prev = list;
 }
 
-inline void boot_DoublyLinkedList_Remove(boot_DoublyLinkedList *list, boot_DoublyLinkedListElement *elem)
+inline void boot_DoublyLinkedList_Add(boot_DoublyLinkedListElement *before, boot_DoublyLinkedListElement *elem)
 {
-    if (elem->prev != NULL) {
-        elem->prev->next = elem->next;
-    } else {
-        list->begin = elem->next;
-    }
-    if (elem->next != NULL) {
-        elem->next->prev = elem->prev;
-    }
+    elem->prev = before->prev;
+    elem->next = before;
+    before->prev->next = elem;
+    before->prev = elem;
+}
+
+inline void boot_DoublyLinkedList_Remove(boot_DoublyLinkedListElement *elem)
+{
+    elem->prev->next = elem->next;
+    elem->next->prev = elem->prev;
 }
 
 inline int boot_Log2U64(uint64_t val)
@@ -101,7 +99,7 @@ TMINMAX(LL, long long)
     unsigned t : boot_MinU ## s
 
 #define boot_Min(a, b) _Generic((a)+(b),\
-    boot_MinG(, int,),\
+    boot_MinG(, int),\
     boot_MinG(L, long),\
     boot_MinG(LL, long long)\
     )(a, b)
@@ -153,6 +151,7 @@ namespace boot {
 
 #define NS_FUNC(prefix, name) inline constexpr auto& name = :: prefix ## name;
 
+NS_FUNC(boot_, DoublyLinkedList_Init)
 NS_FUNC(boot_, DoublyLinkedList_Add)
 NS_FUNC(boot_, DoublyLinkedList_Remove)
 

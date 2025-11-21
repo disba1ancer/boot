@@ -3,7 +3,6 @@
 
 #include <stdint.h>
 #include "boot/util.h"
-#include "boot/data.h"
 #include <stdalign.h>
 
 #ifdef __cplusplus
@@ -17,7 +16,15 @@ enum i686_bios_mem_MapEntryType {
     i686_bios_mem_ACPINVSMemory,
 };
 
-int i686_bios_mem_GetMap(unsigned* context, boot_MemoryMapEntry* entry);
+BOOT_STRUCT(i686_bios_mem_MemoryMapEntry) {
+    alignas(8)
+    uint64_t begin;
+    uint64_t size;
+    uint32_t type;
+    uint32_t flags;
+};
+
+int i686_bios_mem_GetMap(unsigned* context, i686_bios_mem_MemoryMapEntry* entry);
 
 #ifdef __cplusplus
 } // extern "C"
@@ -26,6 +33,8 @@ namespace i686::bios::mem {
 
 //using MapEntry = i686_bios_mem_MapEntry;
 using MapEntryType = i686_bios_mem_MapEntryType;
+
+using MemoryMapEntry = i686_bios_mem_MemoryMapEntry;
 
 inline constexpr auto MapEntryType_AvailableMemory = i686_bios_mem_AvailableMemory;
 inline constexpr auto MapEntryType_ReservedMemory = i686_bios_mem_ReservedMemory;
