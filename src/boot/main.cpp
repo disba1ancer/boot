@@ -92,7 +92,7 @@ void LoadAndStartKernel(boot_StartupInfo *si)
         uint64_t segmentLoadEnd = boot::ELoad(programHeader.loadSize, e)
             + segmentLoadStart;
         segmentLoadStart &= ~(uint64_t)(PageSize - 1);
-        int flags = (boot::ELoad(header.flags, e) & 7) + boot_MemoryFlags_Kernel;
+        int flags = (boot::ELoad(programHeader.flags, e) & 7) + boot_MemoryFlags_Kernel;
         void* dst;
         if (segmentFileStart < segmentFileEnd) {
             for (;

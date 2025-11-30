@@ -181,13 +181,13 @@ boot_VirtualEnterASM:
 
         mov     ecx, 0xC0000080
         rdmsr
-        or      eax, 0x100
+        or      eax, 0x900
         wrmsr
         mov     eax, cr4
         mov     ecx, boot_x86_64_pml4
         mov     edx, cr0
         or      eax, 0x320
-        or      edx, 0x80000002
+        or      edx, 0x80010002
         mov     cr4, eax
         and     edx, 0xFFFFFFFB
         mov     cr3, ecx
