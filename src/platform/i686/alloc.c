@@ -192,11 +192,9 @@ boot_MemoryMap *PrepareMemmapRegions(void)
     while (i686_bios_mem_GetMap(&c, &entry)) {
         uint64_t begin = AlignUp64(entry.begin, boot_Alloc_PageSize);
         uint64_t end = AlignDown64(entry.begin + entry.size, boot_Alloc_PageSize);
-        if (end <= begin) {
-            goto cont;
+        if (end > begin) {
+            InsertRegion(memmap, begin, end, MapRegionType(entry.type));
         }
-        InsertRegion(memmap, begin, end, MapRegionType(entry.type));
-    cont:
         if (c == 0) break;
     }
     if (memmap->count == 0) {
