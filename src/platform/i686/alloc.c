@@ -125,7 +125,7 @@ void boot_InitAlloc(void)
     boot_MemoryMap *memmap = PrepareMemmapRegions();
     MergeMemmap(memmap);
     MemmapExcludeByOrder(memmap);
-    boot_Heap_Resize(ReadEntries(memmap->entries), sizeof(boot_MemoryMapEntry) * (memmap->count + 1));
+    boot_Heap_Resize(ReadEntries(memmap->entries), sizeof(boot_MemoryMapEntry) * (memmap->count + 2));
     boot_InitVirtualAlloc(memmap);
 }
 

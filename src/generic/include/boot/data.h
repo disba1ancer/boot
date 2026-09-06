@@ -18,10 +18,12 @@ enum boot_LdrDataType {
 };
 
 enum boot_MemoryMapEntryType {
+    boot_MemoryMapEntryType_ReservedMemory,
     boot_MemoryMapEntryType_AvailableMemory,
     boot_MemoryMapEntryType_BootReclaimable,
     boot_MemoryMapEntryType_SystemReclaimable,
-    boot_MemoryMapEntryType_ReservedMemory,
+    boot_MemoryMapEntryType_Kernel,
+    boot_MemoryMapEntryType_Inherited,
 };
 
 BOOT_STRUCT(boot_MemoryMapEntry) {

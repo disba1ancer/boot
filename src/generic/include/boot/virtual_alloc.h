@@ -3,6 +3,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include "boot/data.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -17,9 +18,15 @@ enum boot_MemoryFlags {
     boot_MemoryFlags_Device = 32,
 };
 
+uint64_t boot_GetAllocCurrentAddr(void);
 void* boot_AllocPage(void);
 void* boot_VirtualAlloc(uint64_t virtPageAddr, int flags);
+int boot_VirtualMap(uint64_t virtPageAddr, uint64_t phyPageAddr, int flags);
 void boot_VirtualEnter(uint64_t entryPoint);
+void boot_CommitKernelMemory(void);
+
+
+extern boot_MemoryMap* boot_memmap;
 
 #ifdef __cplusplus
 }

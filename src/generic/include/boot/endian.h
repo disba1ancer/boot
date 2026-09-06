@@ -54,31 +54,37 @@ BOOT_STRUCT(boot_BE64U) {
 BOOT_UNION(boot_RE16S) {
     boot_LE16S l;
     boot_BE16S b;
+    int16_t r;
 };
 
 BOOT_UNION(boot_RE32S) {
     boot_LE32S l;
     boot_BE32S b;
+    int32_t r;
 };
 
 BOOT_UNION(boot_RE64S) {
     boot_LE64S l;
     boot_BE64S b;
+    int64_t r;
 };
 
 BOOT_UNION(boot_RE16U) {
     boot_LE16U l;
     boot_BE16U b;
+    uint16_t r;
 };
 
 BOOT_UNION(boot_RE32U) {
     boot_LE32U l;
     boot_BE32U b;
+    uint32_t r;
 };
 
 BOOT_UNION(boot_RE64U) {
     boot_LE64U l;
     boot_BE64U b;
+    uint64_t r;
 };
 
 #define BOOT_ENDIAN_BSWAP {\
