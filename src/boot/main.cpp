@@ -115,7 +115,10 @@ void LoadAndStartKernel(boot_StartupInfo *si)
         for (; segmentFileStart < segmentFileEnd; segmentFileStart += PageSize) {
             auto page = static_cast<byte*>(boot_AllocPage());
             kernelFile.Read(page, PageSize, &readSize, segmentFileStart);
-            memset(page + readSize, 0, PageSize - readSize);
+            auto leftoverSize = segmentFileEnd - segmentFileStart;
+            if (segmentFileEnd < segmentLoadEnd && leftoverSize < PageSize) {
+                memset(page + leftoverSize, 0, PageSize - leftoverSize);
+            }
         }
         for (; segmentFileStart < segmentLoadEnd; segmentFileStart += PageSize) {
             auto page = static_cast<byte*>(boot_AllocPage());
