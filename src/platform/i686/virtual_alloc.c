@@ -75,19 +75,6 @@ void* boot_AllocPage(void)
     return (void*)page;
 }
 
-static void MapFirstMeg(void)
-{
-    uint32_t pageFlags = boot_MemoryFlags_Execute
-        | boot_MemoryFlags_Write;
-    for (uintptr_t i = 0; i < 0xA0000; i += boot_Alloc_PageSize) {
-        boot_VirtualMap(i, i, pageFlags);
-    }
-    pageFlags |= boot_MemoryFlags_Device;
-    for (uint32_t i = 0xA0000; i < 0x100000; i += boot_Alloc_PageSize) {
-        boot_VirtualMap(i, i, pageFlags);
-    }
-}
-
 void boot_InitVirtualAlloc(boot_MemoryMap* memmap) {
     boot_memmap = memmap;
     InitPagedAlloc();
@@ -238,6 +225,90 @@ void* boot_VirtualToPtr(uint64_t virtAddr)
     return (void*)(x86_64_PageEntry_GetAddr(&entry) | (virtAddr & 0xFFF));
 }
 
+static int boot_VirtualMap1G(uint64_t virtPageAddr, uint64_t phyPageAddr, int flags)
+{
+    x86_64_PageEntry pml4ptr = Pml4();
+    x86_64_PageEntry* pageEntry;
+    pageEntry = PageDirectory(&pml4ptr, (size_t)(virtPageAddr >> 39));
+    if (pageEntry == NULL) { return 0; }
+    pageEntry = PageEntry2(pageEntry, virtPageAddr >> 21);
+    if (x86_64_PageEntry_GetFlags(pageEntry) & i686_PageEntryFlag_Present) {
+        return 0;
+    }
+    *pageEntry = (x86_64_PageEntry)x86_64_MakePageEntry(phyPageAddr, TranslateFlags(flags) | i686_PageEntryFlag_PAT);
+    return 1;
+}
+
+static int Is1GBPagesPagesSupported(void)
+{
+    i686_CPUIDLeaf r = i686_cpuid(0x80000000, 0);
+    if (r.eax < 1) {
+        return 0;
+    }
+    r = i686_cpuid(0x80000001, 0);
+    return !!((r.edx >> 26) & 1);
+}
+
+static int boot_VirtualMap2M(uint64_t virtPageAddr, uint64_t phyPageAddr, int flags)
+{
+    x86_64_PageEntry pml4ptr = Pml4();
+    x86_64_PageEntry* pageEntry;
+    pageEntry = PageDirectory(&pml4ptr, (size_t)(virtPageAddr >> 39));
+    if (pageEntry == NULL) { return 0; }
+    pageEntry = PageDirectory(pageEntry, (size_t)(virtPageAddr >> 30));
+    if (pageEntry == NULL) { return 0; }
+    pageEntry = PageEntry2(pageEntry, virtPageAddr >> 21);
+    if (x86_64_PageEntry_GetFlags(pageEntry) & i686_PageEntryFlag_Present) {
+        return 0;
+    }
+    *pageEntry = (x86_64_PageEntry)x86_64_MakePageEntry(phyPageAddr, TranslateFlags(flags) | i686_PageEntryFlag_PAT);
+    return 1;
+}
+
+static const boot_MemoryMapEntry* FindNextMemEntry(const boot_MemoryMapEntry* from)
+{
+    const boot_MemoryMapEntry* entries = (void*)(boot_memmap->entries);
+    const boot_MemoryMapEntry* end = entries + (ptrdiff_t)boot_memmap->count + 1;
+    if (from == NULL) {
+        from = entries;
+    } else {
+        from += 1;
+    }
+    for (const boot_MemoryMapEntry* i = from; i != end; ++i) {
+        switch (i->type) {
+        case boot_MemoryMapEntryType_AvailableMemory:
+        case boot_MemoryMapEntryType_BootReclaimable:
+        case boot_MemoryMapEntryType_SystemReclaimable:
+        case boot_MemoryMapEntryType_Kernel:
+        case boot_MemoryMapEntryType_Inherited:
+            return i;
+        }
+    }
+    return NULL;
+}
+
+static void MakeIdentityMap(void)
+{
+    uint32_t pageFlags = boot_MemoryFlags_Execute
+        | boot_MemoryFlags_Write;
+    uint64_t maxAddr = 0;
+    const boot_MemoryMapEntry* ent = NULL;
+    while ((ent = FindNextMemEntry(ent))) {
+        if (ent->end > maxAddr) {
+            maxAddr = ent->end;
+        }
+    }
+    if (!Is1GBPagesPagesSupported()) {
+        for (uint64_t i = 0; i < maxAddr; i += 0x200000) {
+            boot_VirtualMap2M(i, i, pageFlags);
+        }
+        return;
+    }
+    for (uint64_t i = 0; i < maxAddr; i += 0x40000000) {
+        boot_VirtualMap1G(i, i, pageFlags);
+    }
+}
+
 int boot_VirtualMap(uint64_t virtPageAddr, uint64_t phyPageAddr, int flags)
 {
     x86_64_PageEntry* pageEntry = FindAllocPageDirectory(virtPageAddr);
@@ -247,14 +318,6 @@ int boot_VirtualMap(uint64_t virtPageAddr, uint64_t phyPageAddr, int flags)
         return 0;
     }
     *pageEntry = (x86_64_PageEntry)x86_64_MakePageEntry(phyPageAddr, TranslateFlags(flags));
-    return 1;
-}
-
-static int CreateMappingWindow(void)
-{
-    unsigned pageFlags = i686_PageEntryFlag_Present | i686_PageEntryFlag_Write;
-    (*boot_x86_64_pml4)[256] = (x86_64_PageEntry)
-        x86_64_MakePageEntry((uintptr_t)boot_x86_64_pml4, pageFlags);
     return 1;
 }
 
@@ -284,14 +347,14 @@ static void CommitMemory(uint32_t newType)
 
 void boot_VirtualEnter(uint64_t entryPoint)
 {
-    MapFirstMeg();
-    if (CreateMappingWindow() == 0) abort();
     boot_LdrData *data = malloc(sizeof(boot_LdrData) * 2);
-
-    CommitMemory(boot_MemoryMapEntryType_ReservedMemory);
     data[0] = (boot_LdrData){ .type = boot_LdrDataType_EntriesCount, .value = 2 };
     data[1] = (boot_LdrData){ .type = boot_LdrDataType_MemoryMap,
         .value = (uintptr_t)(void*)boot_memmap };
+
+    MakeIdentityMap();
+    CommitMemory(boot_MemoryMapEntryType_ReservedMemory);
+
     boot_VirtualEnterASM(entryPoint, data);
     free(data);
 }

@@ -192,6 +192,23 @@ inline i686_RMPtr i686_MakeRMPointer(void *ptr) {
     return rslt;
 }
 
+typedef struct CPUIDLeaf
+{
+    uint32_t ebx;
+    uint32_t edx;
+    uint32_t ecx;
+    uint32_t eax;
+} i686_CPUIDLeaf;
+
+inline i686_CPUIDLeaf i686_cpuid(uint32_t root, uint32_t leaf)
+{
+    i686_CPUIDLeaf r;
+    r.eax = root;
+    r.ecx = leaf;
+    __asm__("cpuid":"+a"(r.eax),"+c"(r.ecx),"=d"(r.edx),"=b"(r.ebx));
+    return r;
+}
+
 #ifdef __cplusplus
 template <typename T>
 T* i686_LoadPointer(i686_RMPtr fptr) {
