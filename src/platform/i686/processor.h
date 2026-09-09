@@ -87,6 +87,12 @@ typedef enum i686_PageEntryFlag {
     i686_PageEntryFlag_Global = 1 << 8,
 } i686_PageEntryFlag;
 
+#ifndef __cplusplus
+#define i686_PageEntryFlag_NX ((uint64_t)1 << 63)
+#else
+constexpr uint64_t i686_PageEntryFlag_NX = (uint64_t)1 << 63;
+#endif
+
 typedef struct i686_PageEntry {
     uint32_t data;
 } i686_PageEntry;
@@ -107,7 +113,7 @@ typedef struct x86_64_PageEntry {
     alignas(8) uint64_t data;
 } x86_64_PageEntry;
 
-#define x86_64_internal_MakePageEntry(phyPage, flags) { ((phyPage) & 0xFFFFFFFFFFFFF000U) | ((flags) & 0xFFFU) }
+#define x86_64_internal_MakePageEntry(phyPage, flags) { ((phyPage) & 0x7FFFFFFFFFFFF000U) | ((flags) & 0x8000000000000FFFU) }
 
 #ifndef __cplusplus
 #define x86_64_MakePageEntry(phyPage, flags) x86_64_internal_MakePageEntry(phyPage, flags)
@@ -124,9 +130,9 @@ inline uint64_t x86_64_PageEntry_GetAddr(const x86_64_PageEntry* entry)
     return entry->data & 0xFFFFFFFFFFFFF000U;
 }
 
-inline uint32_t x86_64_PageEntry_GetFlags(const x86_64_PageEntry* entry)
+inline uint64_t x86_64_PageEntry_GetFlags(const x86_64_PageEntry* entry)
 {
-    return entry->data & 0xFFFU;
+    return entry->data & 0x8000000000000FFFU;
 }
 
 typedef struct i686_InterruptFrame {

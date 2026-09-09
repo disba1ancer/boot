@@ -21,6 +21,7 @@ enum boot_MemoryFlags {
 uint64_t boot_GetAllocCurrentAddr(void);
 void* boot_AllocPage(void);
 void* boot_VirtualAlloc(uint64_t virtPageAddr, int flags);
+void* boot_VirtualToPtr(uint64_t virtAddr);
 int boot_VirtualMap(uint64_t virtPageAddr, uint64_t phyPageAddr, int flags);
 void boot_VirtualEnter(uint64_t entryPoint);
 void boot_CommitKernelMemory(void);

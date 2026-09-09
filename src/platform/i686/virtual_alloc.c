@@ -112,6 +112,7 @@ static int AllocIfNotPresent(x86_64_PageEntry* entry)
 static uint32_t TranslateFlags(int flags)
 {
     uint32_t result = i686_PageEntryFlag_Present;
+    result |= i686_PageEntryFlag_NX * !(flags & boot_MemoryFlags_Execute);
     result |= i686_PageEntryFlag_Write * !!(flags & boot_MemoryFlags_Write);
     result |= i686_PageEntryFlag_User * !(flags & boot_MemoryFlags_Kernel);
     result |= i686_PageEntryFlag_PWT
@@ -204,6 +205,37 @@ void* boot_VirtualAlloc(uint64_t virtPageAddr, int flags)
         return NULL;
     }
     return (void*)(uintptr_t)x86_64_PageEntry_GetAddr(pageEntry);
+}
+
+void* boot_VirtualToPtr(uint64_t virtAddr)
+{
+    x86_64_PageEntry entry;
+    entry = (*boot_x86_64_pml4)[(virtAddr >> 39) & 0x1FF];
+    if (!(x86_64_PageEntry_GetFlags(&entry) & i686_PageEntryFlag_Present)) {
+        return NULL;
+    }
+    x86_64_PageEntry (*pdpt)[512] = (void*)x86_64_PageEntry_GetAddr(&entry);
+    entry = (*pdpt)[(virtAddr >> 30) & 0x1FF];
+    if (!(x86_64_PageEntry_GetFlags(&entry) & i686_PageEntryFlag_Present)) {
+        return NULL;
+    }
+    if (x86_64_PageEntry_GetFlags(&entry) & i686_PageEntryFlag_PAT) {
+        return (void*)(x86_64_PageEntry_GetAddr(&entry) | (virtAddr & 0x3FFFFFFF));
+    }
+    x86_64_PageEntry (*pdt)[512] = (void*)x86_64_PageEntry_GetAddr(&entry);
+    entry = (*pdt)[(virtAddr >> 21) & 0x1FF];
+    if (!(x86_64_PageEntry_GetFlags(&entry) & i686_PageEntryFlag_Present)) {
+        return NULL;
+    }
+    if (x86_64_PageEntry_GetFlags(&entry) & i686_PageEntryFlag_PAT) {
+        return (void*)(x86_64_PageEntry_GetAddr(&entry) | (virtAddr & 0x1FFFFF));
+    }
+    x86_64_PageEntry (*pt)[512] = (void*)x86_64_PageEntry_GetAddr(&entry);
+    entry = (*pt)[(virtAddr >> 12) & 0x1FF];
+    if (!(x86_64_PageEntry_GetFlags(&entry) & i686_PageEntryFlag_Present)) {
+        return NULL;
+    }
+    return (void*)(x86_64_PageEntry_GetAddr(&entry) | (virtAddr & 0xFFF));
 }
 
 int boot_VirtualMap(uint64_t virtPageAddr, uint64_t phyPageAddr, int flags)

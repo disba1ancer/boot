@@ -103,4 +103,16 @@ enum elf64_SegFlags {
     elf64_SegFlags_ProcOS = 0xFF000000,
 };
 
+BOOT_STRUCT(elf64_Dynamic) {
+    boot_RE64S tag;
+    boot_RE64U val;
+};
+
+enum elf64_DynamicTags {
+    elf64_DynamicTags_Null,
+    elf64_DynamicTags_RelA = 7,
+    elf64_DynamicTags_RelASize,
+    elf64_DynamicTags_RelAEntrySize,
+};
+
 #endif // ELF64_H
