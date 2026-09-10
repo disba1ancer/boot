@@ -239,7 +239,7 @@ static int boot_VirtualMap1G(uint64_t virtPageAddr, uint64_t phyPageAddr, int fl
     return 1;
 }
 
-static int Is1GBPagesPagesSupported(void)
+static int Is1GBPagesSupported(void)
 {
     i686_CPUIDLeaf r = i686_cpuid(0x80000000, 0);
     if (r.eax < 1) {
@@ -298,7 +298,7 @@ static void MakeIdentityMap(void)
             maxAddr = ent->end;
         }
     }
-    if (!Is1GBPagesPagesSupported()) {
+    if (!Is1GBPagesSupported()) {
         for (uint64_t i = 0; i < maxAddr; i += 0x200000) {
             boot_VirtualMap2M(i, i, pageFlags);
         }
