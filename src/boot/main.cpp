@@ -188,10 +188,13 @@ void LoadAndStartKernel(boot_StartupInfo *si)
         switch (boot::ELoad(dynEntry.tag, e)) {
         case elf64_DynamicTags_RelA:
             relAStart = boot::ELoad(dynEntry.val, e) + loadOffset;
+            break;
         case elf64_DynamicTags_RelASize:
             relAEnd = boot::ELoad(dynEntry.val, e);
+            break;
         case elf64_DynamicTags_RelAEntrySize:
             relAEntSize = boot::ELoad(dynEntry.val, e);
+            break;
         }
     }
     relAEnd += relAStart;
